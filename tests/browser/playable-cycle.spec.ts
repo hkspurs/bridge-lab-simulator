@@ -77,7 +77,7 @@ test("camera drag and pinch change view without starting a claw attempt", async 
   await canvas.evaluate(element => { element.setPointerCapture = () => {}; element.releasePointerCapture = () => {}; });
   const touch = (type: string, id: number, px: number) => canvas.dispatchEvent(type, {
     pointerId: id, pointerType: "touch", isPrimary: id === 11, clientX: px, clientY: y,
-    button: 0, buttons: type === "pointerup" ? 0 : 1, bubbles: true,
+    button: type === "pointermove" ? -1 : 0, buttons: type === "pointerup" ? 0 : 1, bubbles: true,
   });
   await touch("pointerdown", 11, x);
   await touch("pointerdown", 12, x + 40);

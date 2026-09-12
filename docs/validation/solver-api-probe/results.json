@@ -1,0 +1,42 @@
+{
+  "rapier": {
+    "version": "0.20.0",
+    "nativeTorqueTrials": [
+      {
+        "capNm": 0,
+        "omegaRadps": 0,
+        "inferredTorqueNm": 0
+      },
+      {
+        "capNm": 0.02,
+        "omegaRadps": 0.1666666567325592,
+        "inferredTorqueNm": 0.019999998807907104
+      },
+      {
+        "capNm": 0.08,
+        "omegaRadps": 0.6666667461395264,
+        "inferredTorqueNm": 0.08000000953674316
+      }
+    ]
+  },
+  "jolt": {
+    "packageVersion": "1.1.0",
+    "motorMinNm": -0.07999999821186066,
+    "motorMaxNm": 0.07999999821186066,
+    "velocityIterations": 16,
+    "positionIterations": 8,
+    "penetrationSlopM": 0.00009999999747378752,
+    "contactFriction": 0.3400000035762787,
+    "contactCallbacks": [
+      {
+        "name": "OnContactAdded",
+        "exposed": true
+      },
+      {
+        "name": "OnContactPersisted",
+        "exposed": true
+      }
+    ]
+  },
+  "scope": "Rapier one-step zero-gravity rotor torque only; Jolt initialized WASM setter/getter exposure only. No contact/obstruction/friction accuracy or browser acceptance."
+}

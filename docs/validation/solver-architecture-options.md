@@ -2,6 +2,8 @@
 
 This is an API assessment and proposed experiment, not a replacement implementation or a claim that another engine passes. The accepted design explicitly selects Havok. Replacing it requires an architectural decision; no dependency, backend code, or production behavior changes here.
 
+> **Superseded API detail:** The pinned 0.20.0 package now exposes a native motor cap, verified by independent rotor dynamics. See [the executable probe and current decision](solver-api-probe/README.md). The friction-equivalence blocker remains. The table below records the earlier documentation-only assessment.
+
 ## Rapier capability and gaps
 
 | Requirement | Documented JavaScript capability | Implication |

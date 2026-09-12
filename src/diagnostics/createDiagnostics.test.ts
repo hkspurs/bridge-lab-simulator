@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { baselineProfile } from "../config/baselineProfile";
+import { playableProfile } from "../config/playableProfile";
 import { createDiagnostics, type DiagnosticSnapshot } from "./createDiagnostics";
 
 describe("physical diagnostics", () => {
@@ -35,7 +36,7 @@ describe("physical diagnostics", () => {
     expect(host.textContent).toContain("0.320 kg");
     expect(host.textContent).toContain("0.660");
     expect(host.textContent).toContain("LOW");
-    expect(host.textContent).toContain("LOW / ESTIMATE");
+    expect(host.textContent).toContain("LOW / ENGINEERING-INITIAL");
     expect(host.querySelector('[data-testid="confidence-warning"]')?.textContent).toContain("ESTIMATE");
   });
 
@@ -94,5 +95,26 @@ describe("physical diagnostics", () => {
     now.mockReturnValue(100);
     diagnostics.update(snapshot(3));
     expect(host.querySelector('[data-testid="fixed-step-count"]')?.textContent).toBe("3");
+  });
+
+  it("starts collapsed and labels observed and commanded claw quantities", () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const engine = new NullEngine();
+    const scene = new Scene(engine);
+    const diagnostics = createDiagnostics({ scene, host, profile: playableProfile });
+    resources.push({ scene, engine, diagnostics });
+    const details = host.querySelector("details")!;
+    expect(details.open).toBe(false);
+    diagnostics.update({
+      position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0, w: 1 },
+      fixedStepCount: 2, renderFps: 60, profileId: playableProfile.id,
+      clawAnglesRad: [0.2, 0.3], clawTargetAnglesRad: [0.4, 0.5], actuatorTorqueLimitsNm: [0.8, 0.8],
+    });
+    expect(host.textContent).toContain("Observed claw angles");
+    expect(host.textContent).toContain("0.200 / 0.300 rad");
+    expect(host.textContent).toContain("Commanded claw targets");
+    expect(host.textContent).toContain("0.400 / 0.500 rad");
+    expect(host.textContent).toContain("LOW / ENGINEERING-INITIAL");
   });
 });

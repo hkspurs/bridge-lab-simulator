@@ -5,7 +5,8 @@ import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { Scene } from "@babylonjs/core/scene";
-import type { CalibrationProfile, Confidence } from "../config/types";
+import type { Confidence, SupportedCalibrationProfile } from "../config/types";
+import { isPlayableProfile } from "../physics/createBridge";
 import { computeMassProperties } from "../physics/massProperties";
 
 export interface DiagnosticSnapshot {
@@ -29,7 +30,7 @@ export interface DiagnosticSnapshot {
 export interface DiagnosticsOptions {
   readonly scene: Scene;
   readonly host: HTMLElement;
-  readonly profile: CalibrationProfile;
+  readonly profile: SupportedCalibrationProfile;
 }
 
 export interface DiagnosticsHandle {
@@ -72,21 +73,27 @@ const createGravityArrow = (scene: Scene): Mesh[] => {
 };
 
 export function createDiagnostics({ scene, host, profile }: DiagnosticsOptions): DiagnosticsHandle {
-  const root = document.createElement("aside");
+  const root = document.createElement("details");
   root.className = "diagnostics-hud";
   root.dataset.testid = "diagnostics-hud";
   root.setAttribute("aria-label", "Physics diagnostics");
 
-  const title = document.createElement("h2");
-  title.textContent = "BRIDGE LAB diagnostics";
+  const title = document.createElement("summary");
+  title.textContent = "Diagnostics";
   root.append(title);
   addRow(root, "Profile", "profile-id", profile.id);
   addRow(root, "Physics rate", "physics-rate", `${(1 / profile.physics.stepSeconds.value).toFixed(0)} Hz`);
   addRow(root, "Prize mass", "prize-mass", `${profile.prize.massKg.value.toFixed(3)} kg`);
   addRow(root, "COM height ratio", "com-height-ratio", profile.prize.centerOfMassRatioZ.value.toFixed(3));
-  addRow(root, "Rod centre distance", "rod-centre-distance", `${profile.bridge.rodCenterDistanceM.value.toFixed(3)} m`);
+  if (isPlayableProfile(profile)) addRow(root, "Bridge structure", "bridge-structure", `${profile.bridge.rods.length} sourced rods`);
+  else addRow(root, "Rod centre distance", "rod-centre-distance", `${profile.bridge.rodCenterDistanceM.value.toFixed(3)} m`);
   const fixedStepCount = addRow(root, "Fixed steps", "fixed-step-count", "0");
   const renderFps = addRow(root, "Render FPS", "render-fps", "0");
+  const observedAngles = addRow(root, "Observed claw angles", "claw-angles", "—");
+  const commandedAngles = addRow(root, "Commanded claw targets", "claw-target-angles", "—");
+  const torqueLimits = addRow(root, "Commanded torque limits", "claw-torque-limits", "—");
+  const measuredLinear = addRow(root, "Measured prize velocity", "prize-linear-velocity", "—");
+  const measuredAngular = addRow(root, "Measured angular velocity", "prize-angular-velocity", "—");
 
   const confidenceWarning = document.createElement("p");
   confidenceWarning.dataset.testid = "confidence-warning";
@@ -97,11 +104,13 @@ export function createDiagnostics({ scene, host, profile }: DiagnosticsOptions):
   const confidenceRows = [
     ["Mass confidence", profile.prize.massKg.confidence],
     ["Friction confidence", profile.contacts.boxRodStaticFriction.confidence],
-    ["Rod geometry confidence", profile.bridge.rodDiameterM.confidence],
+    ["Rod geometry confidence", isPlayableProfile(profile)
+      ? (profile.bridge.rods[0].crossSection.kind === "circular" ? profile.bridge.rods[0].crossSection.diameterM.confidence : profile.bridge.rods[0].crossSection.widthM.confidence)
+      : profile.bridge.rodDiameterM.confidence],
   ] as const;
   for (const [label, confidence] of confidenceRows) {
     const labelText = confidenceLabel(confidence);
-    addRow(root, label, `confidence-${label.split(" ")[0].toLowerCase()}`, `${labelText} / ESTIMATE`);
+    addRow(root, label, `confidence-${label.split(" ")[0].toLowerCase()}`, `${labelText} / ${profile.prize.massKg.sourceKind.toUpperCase()}`);
   }
   host.append(root);
 
@@ -142,6 +151,14 @@ export function createDiagnostics({ scene, host, profile }: DiagnosticsOptions):
       lastDomUpdate = now;
       fixedStepCount.textContent = String(snapshot.fixedStepCount);
       renderFps.textContent = Number.isFinite(snapshot.renderFps) ? snapshot.renderFps.toFixed(0) : "0";
+      const format = (values: readonly number[] | undefined, unit: string) => values?.length ? `${values.map(value => value.toFixed(3)).join(" / ")} ${unit}` : "—";
+      observedAngles.textContent = format(snapshot.clawAnglesRad, "rad");
+      commandedAngles.textContent = format(snapshot.clawTargetAnglesRad, "rad");
+      torqueLimits.textContent = format(snapshot.actuatorTorqueLimitsNm, "N·m");
+      const vector = (value: Readonly<{ x: number; y: number; z: number }> | undefined, unit: string) => value
+        ? `${value.x.toFixed(3)} / ${value.y.toFixed(3)} / ${value.z.toFixed(3)} ${unit}` : "—";
+      measuredLinear.textContent = vector(snapshot.prizeLinearVelocity, "m/s");
+      measuredAngular.textContent = vector(snapshot.prizeAngularVelocity, "rad/s");
     },
     dispose() {
       if (disposed) return;

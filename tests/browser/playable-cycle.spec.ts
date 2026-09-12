@@ -59,8 +59,11 @@ test("retains successful front, side and portrait framing evidence", async ({ pa
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("camera drag and pinch change view without starting a claw attempt", async ({ page }) => {
+test("camera drag and pinch change view without starting a claw attempt", async ({ page, browserName }) => {
+  const cdp = browserName === "chromium" ? await page.context().newCDPSession(page) : undefined;
+  if (cdp) await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
   await start(page);
+  expect(await page.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThanOrEqual(2);
   const canvas = page.locator("canvas");
   const bounds = (await canvas.boundingBox())!;
   const x = bounds.x + bounds.width * .4, y = bounds.y + bounds.height * .5;
@@ -73,18 +76,26 @@ test("camera drag and pinch change view without starting a claw attempt", async 
   await phase(page, "READY");
   await page.getByRole("button", { name: "Front", exact: true }).click();
   await expect.poll(async () => (await latest(page)).camera!.alpha).toBeCloseTo(-Math.PI / 2, 4);
-  // Synthetic touch input with capture shim; native iPhone gestures remain a device check.
-  await canvas.evaluate(element => { element.setPointerCapture = () => {}; element.releasePointerCapture = () => {}; });
-  const touch = (type: string, id: number, px: number) => canvas.dispatchEvent(type, {
-    pointerId: id, pointerType: "touch", isPrimary: id === 11, clientX: px, clientY: y,
-    button: type === "pointermove" ? -1 : 0, buttons: type === "pointerup" ? 0 : 1, bubbles: true,
-  });
-  await touch("pointerdown", 11, x);
-  await touch("pointerdown", 12, x + 40);
-  await touch("pointermove", 12, x + 60);
-  await touch("pointermove", 12, x + 100);
-  await touch("pointerup", 12, x + 100);
-  await touch("pointerup", 11, x);
+  if (cdp) {
+    const points = (right: number) => [{ x, y, id: 11 }, { x: right, y, id: 12 }];
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: points(x + 40) });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: points(x + 60) });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: points(x + 100) });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  } else {
+    // WebKit synthetic touch/capture shim; physical iPhone remains a device check.
+    await canvas.evaluate(element => { element.setPointerCapture = () => {}; element.releasePointerCapture = () => {}; });
+    const touch = (type: string, id: number, px: number) => canvas.dispatchEvent(type, {
+      pointerId: id, pointerType: "touch", isPrimary: id === 11, clientX: px, clientY: y,
+      button: type === "pointermove" ? -1 : 0, buttons: type === "pointerup" ? 0 : 1, bubbles: true,
+    });
+    await touch("pointerdown", 11, x);
+    await touch("pointerdown", 12, x + 40);
+    await touch("pointermove", 12, x + 60);
+    await touch("pointermove", 12, x + 100);
+    await touch("pointerup", 12, x + 100);
+    await touch("pointerup", 11, x);
+  }
   await expect.poll(async () => Math.abs((await latest(page)).camera!.radius - .78)).toBeGreaterThan(.001);
   await phase(page, "READY");
 });

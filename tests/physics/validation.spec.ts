@@ -13,6 +13,7 @@ import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { beforeAll, afterEach, describe, expect, it } from "vitest";
+import { playableClawProfile } from "../../src/config/playableClawProfile";
 import { playableProfile } from "../../src/config/playableProfile";
 import { createPhysicsScene } from "../../src/physics/createPhysicsScene";
 import { createPrize } from "../../src/physics/createPrize";
@@ -174,7 +175,12 @@ describe("real Havok quantitative acceptance matrix", () => {
     const handle = await machine();
     const bodyCount = (handle.scene.getPhysicsEngine()! as PhysicsEngine).getBodies().length;
     const prizeId = handle.prize.uniqueId;
-    const cycles = [];
+    type TerminalWindow = {
+      ticks: number; peakAngularSpeedRadps: number; peakLinearSpeedMps: number; peakKineticEnergyJ: number;
+      rmsAngularSpeedRadps: number; rmsLinearSpeedMps: number; meanKineticEnergyJ: number; armAngleExcursionRad: number[];
+    };
+    const cycles: { cycle: number; ticks: number; phase: string; terminalAngularSpeedRadps: number;
+      window: TerminalWindow; bodyCount: number; prizeInstanceId: number }[] = [];
     let peakContact: unknown;
     let activeCycle = 0, activeTick = 0;
     let maximumPenetrationM = 0;
@@ -188,7 +194,61 @@ describe("real Havok quantitative acceptance matrix", () => {
       });
     }
     let invalidPhysics = false, maximumJointEscapeM = 0;
-    const step = () => { activeTick++; handle.tick(); };
+    const rig = handle.rig!;
+    const [carriage, head, stem] = rig.bodies;
+    const armLength = playableClawProfile.armLengthM.value;
+    const suspensionLength = playableClawProfile.suspensionLengthM.value;
+    const angleToleranceRad = playableClawProfile.angleToleranceRad.value;
+    const jointNames = ["carriage-head-lock", "head-stem-lock", "left-arm-hinge", "right-arm-hinge"];
+    const maximumAnchorErrorM = [0, 0, 0, 0];
+    const maximumLockedRotationErrorRad = [0, 0, 0, 0];
+    const hingeAngleRangesRad = rig.arms.map(() => ({ minimum: Infinity, maximum: -Infinity }));
+    let maximumHingeLimitViolationRad = 0;
+    const point = (body: PhysicsBody, local: Vector3) => local.rotateByQuaternionToRef(
+      body.transformNode.rotationQuaternion!, new Vector3()).addInPlace(body.transformNode.position);
+    const relativeRotation = (parent: PhysicsBody, child: PhysicsBody) => parent.transformNode.rotationQuaternion!
+      .conjugate().multiply(child.transformNode.rotationQuaternion!).normalize();
+    const rotationMagnitude = (rotation: Quaternion) => 2 * Math.acos(Math.min(1, Math.abs(rotation.w)));
+    const sampleJoints = () => {
+      const anchorErrors = [
+        point(carriage, new Vector3(0, -suspensionLength, 0)).subtract(head.transformNode.position).length(),
+        point(head, new Vector3(0, suspensionLength / 2, 0)).subtract(stem.transformNode.position).length(),
+      ];
+      const lockedRotationErrors = [rotationMagnitude(relativeRotation(carriage, head)), rotationMagnitude(relativeRotation(head, stem))];
+      const armAngles = rig.arms.map((arm, index) => {
+        const side = index === 0 ? -1 : 1;
+        anchorErrors.push(point(head, new Vector3(side * playableClawProfile.hingeHalfSpacingM.value, 0, 0))
+          .subtract(point(arm, new Vector3(0, armLength / 2, 0))).length());
+        const relative = relativeRotation(head, arm);
+        // Isolate permitted local-Z twist; the remaining swing measures both
+        // locked X/Y rotations without conflating them with the hinge angle.
+        const twist = new Quaternion(0, 0, relative.z, relative.w).normalize();
+        const swing = relative.multiply(twist.conjugate()).normalize();
+        lockedRotationErrors.push(rotationMagnitude(swing));
+        const rawAngle = side * 2 * Math.atan2(twist.z, twist.w);
+        const angle = Math.atan2(Math.sin(rawAngle), Math.cos(rawAngle));
+        hingeAngleRangesRad[index].minimum = Math.min(hingeAngleRangesRad[index].minimum, angle);
+        hingeAngleRangesRad[index].maximum = Math.max(hingeAngleRangesRad[index].maximum, angle);
+        maximumHingeLimitViolationRad = Math.max(maximumHingeLimitViolationRad,
+          playableClawProfile.closedAngleRad.value - playableClawProfile.limitMarginRad.value - angle,
+          angle - playableClawProfile.openAngleRad.value - playableClawProfile.limitMarginRad.value);
+        return angle;
+      });
+      anchorErrors.forEach((value, index) => { maximumAnchorErrorM[index] = Math.max(maximumAnchorErrorM[index], value); });
+      lockedRotationErrors.forEach((value, index) => { maximumLockedRotationErrorRad[index] = Math.max(maximumLockedRotationErrorRad[index], value); });
+      maximumJointEscapeM = Math.max(maximumJointEscapeM, anchorErrors[0]); // Retain the original limited measurement too.
+      return armAngles;
+    };
+    const step = () => {
+      activeTick++; handle.tick();
+      invalidPhysics ||= rig.observe().invalidPhysics || ![...handle.prize.position.asArray(),
+        ...handle.prize.rotationQuaternion!.asArray(), ...handle.prize.physicsBody!.getLinearVelocity().asArray(),
+        ...handle.prize.physicsBody!.getAngularVelocity().asArray()].every(Number.isFinite);
+      return sampleJoints();
+    };
+    const movingBodies = rig.bodies.filter(body => body.getMotionType() === PhysicsMotionType.DYNAMIC);
+    const massProperties = movingBodies.map(body => body.getMassProperties());
+    const terminalWindowTicks = 120;
     for (let cycle = 0; cycle < 20; cycle++) {
       activeCycle = cycle + 1; activeTick = 0;
       handle.dispatch({ type: "press", axis: 1 });
@@ -197,23 +257,73 @@ describe("real Havok quantitative acceptance matrix", () => {
       for (let tick = 0; tick < 42; tick++) step();
       handle.dispatch({ type: "release", axis: 2 });
       let ticks = 0;
-      while (handle.sequence!.phase !== "REVIEW" && handle.sequence!.phase !== "FAULT" && ticks++ < 3600) {
-        step(); invalidPhysics ||= handle.rig!.observe().invalidPhysics || ![...handle.prize.position.asArray(), ...handle.prize.rotationQuaternion!.asArray(), ...handle.prize.physicsBody!.getLinearVelocity().asArray(), ...handle.prize.physicsBody!.getAngularVelocity().asArray()].every(Number.isFinite);
-        const head = handle.rig!.head.transformNode;
-        const carriage = handle.rig!.bodies[0].transformNode;
-        maximumJointEscapeM = Math.max(maximumJointEscapeM, head.position.subtract(carriage.position).subtract(new Vector3(0, -.08, 0)).length());
-        for (const contact of handle.rig!.contactSamples()) maximumPenetrationM = Math.max(maximumPenetrationM, -contact.distanceM);
+      while (handle.sequence!.phase !== "REVIEW" && handle.sequence!.phase !== "FAULT" && ticks++ < 3600) step();
+      const terminalAngularSpeedRadps = Math.max(...rig.arms.map(arm => arm.getAngularVelocity().length()));
+      const window: TerminalWindow = {
+        ticks: 0, peakAngularSpeedRadps: 0, peakLinearSpeedMps: 0, peakKineticEnergyJ: 0,
+        rmsAngularSpeedRadps: 0, rmsLinearSpeedMps: 0, meanKineticEnergyJ: 0,
+        armAngleExcursionRad: [0, 0],
+      };
+      const minimumAngles = [Infinity, Infinity], maximumAngles = [-Infinity, -Infinity];
+      // Observe a full second at the unchanged REVIEW hold command, so a
+      // turning-point speed sample cannot certify absence of oscillation.
+      if (handle.sequence!.phase === "REVIEW") for (let tick = 0; tick < terminalWindowTicks; tick++) {
+        const angles = step();
+        angles.forEach((angle, index) => { minimumAngles[index] = Math.min(minimumAngles[index], angle); maximumAngles[index] = Math.max(maximumAngles[index], angle); });
+        let kineticEnergyJ = 0;
+        for (const [index, body] of movingBodies.entries()) {
+          const linearSpeed = body.getLinearVelocity().length(), angularVelocity = body.getAngularVelocity();
+          const angularSpeed = angularVelocity.length(), properties = massProperties[index];
+          const principalRotation = body.transformNode.rotationQuaternion!.multiply(properties.inertiaOrientation!).normalize();
+          const omega = angularVelocity.rotateByQuaternionToRef(principalRotation.conjugate(), new Vector3());
+          const inertia = properties.inertia!;
+          kineticEnergyJ += properties.mass! * (linearSpeed ** 2 + inertia.x * omega.x ** 2 + inertia.y * omega.y ** 2 + inertia.z * omega.z ** 2) / 2;
+          window.peakAngularSpeedRadps = Math.max(window.peakAngularSpeedRadps, angularSpeed);
+          window.peakLinearSpeedMps = Math.max(window.peakLinearSpeedMps, linearSpeed);
+          window.rmsAngularSpeedRadps += angularSpeed ** 2;
+          window.rmsLinearSpeedMps += linearSpeed ** 2;
+        }
+        window.peakKineticEnergyJ = Math.max(window.peakKineticEnergyJ, kineticEnergyJ);
+        window.meanKineticEnergyJ += kineticEnergyJ;
+        window.ticks++;
       }
-      const terminalAngularSpeedRadps = Math.max(...handle.rig!.arms.map(arm => arm.getAngularVelocity().length()));
-      cycles.push({ cycle: cycle + 1, ticks, phase: handle.sequence!.phase, terminalAngularSpeedRadps, bodyCount: (handle.scene.getPhysicsEngine()! as PhysicsEngine).getBodies().length, prizeInstanceId: handle.prize.uniqueId });
+      if (window.ticks) {
+        window.rmsAngularSpeedRadps = Math.sqrt(window.rmsAngularSpeedRadps / (window.ticks * movingBodies.length));
+        window.rmsLinearSpeedMps = Math.sqrt(window.rmsLinearSpeedMps / (window.ticks * movingBodies.length));
+        window.meanKineticEnergyJ /= window.ticks;
+        window.armAngleExcursionRad = maximumAngles.map((angle, index) => angle - minimumAngles[index]);
+      }
+      cycles.push({ cycle: cycle + 1, ticks, phase: handle.sequence!.phase, terminalAngularSpeedRadps, window,
+        bodyCount: (handle.scene.getPhysicsEngine()! as PhysicsEngine).getBodies().length, prizeInstanceId: handle.prize.uniqueId });
       if (handle.sequence!.phase !== "REVIEW") break;
       handle.dispatch({ type: "continue" });
     }
+    const jointMeasurements = jointNames.map((joint, index) => ({ joint, maximumAnchorErrorM: maximumAnchorErrorM[index], maximumLockedRotationErrorRad: maximumLockedRotationErrorRad[index] }));
+    // Compare identically commanded windows across cycles, not actuator work
+    // against a passive energy law. The first three cycles form the baseline.
+    const growthMetrics = [
+      ["rmsAngularSpeedRadps", 1e-4], ["rmsLinearSpeedMps", 1e-5],
+      ["peakAngularSpeedRadps", 1e-4], ["peakLinearSpeedMps", 1e-5],
+      ["meanKineticEnergyJ", 1e-10], ["peakKineticEnergyJ", 1e-10],
+    ] as const;
+    const growthComparisons = growthMetrics.map(([metric, numericalFloor]) => {
+      const values = cycles.map(cycle => cycle.window[metric]);
+      const baseline = values.slice(0, 3), tail = values.slice(-3);
+      const baselinePeak = Math.max(...baseline), baselineMean = baseline.reduce((sum, value) => sum + value, 0) / baseline.length;
+      const laterPeak = Math.max(...values.slice(3)), tailMean = tail.reduce((sum, value) => sum + value, 0) / tail.length;
+      return { metric, baselinePeak, baselineMean, laterPeak, tailMean, numericalFloor,
+        bounded: laterPeak <= baselinePeak * 1.1 + numericalFloor && tailMean <= baselineMean * 1.1 + numericalFloor };
+    });
+    const completeWindows = cycles.length === 20 && cycles.every(cycle => cycle.window.ticks === terminalWindowTicks);
+    const boundedResidualMotion = cycles.every(cycle => cycle.window.peakAngularSpeedRadps <= .05 && cycle.window.peakLinearSpeedMps <= .005 && cycle.window.armAngleExcursionRad.every(value => value <= angleToleranceRad));
+    const jointIntegrity = maximumAnchorErrorM.every(value => value <= .001) && maximumLockedRotationErrorRad.every(value => value <= angleToleranceRad) && maximumHingeLimitViolationRad <= angleToleranceRad;
+    const noGrowingOscillation = completeWindows && boundedResidualMotion && growthComparisons.every(value => value.bounded);
     report("contact-penetration", { maximumPenetrationM, peakContact, cycles: cycles.length }, { maximumWithinOneMm: maximumPenetrationM <= .001 }, "All dynamic and animated body collision callbacks sampled on every 1/120 s tick, including manual travel and initial prize settling; all 20 complete cycles at the sourced playable speeds and geometry. Solver signed contact distance, not visual AABB overlap. Impact impulse remains separate from quasi-static actuator force validation.");
-    report("sustained-mechanism", { peakContact, cycles, invalidPhysics, maximumPenetrationM, maximumJointEscapeM, initialBodyCount: bodyCount }, { twentyCompleteCycles: cycles.length === 20 && cycles.every(value => value.phase === "REVIEW"), finitePhysics: !invalidPhysics, noJointEscape: maximumJointEscapeM <= .001, noGrowingOscillation: cycles.every(value => value.terminalAngularSpeedRadps <= .05), noBodyLeakOrPrizeRecreation: cycles.every(value => value.bodyCount === bodyCount && value.prizeInstanceId === prizeId) }, "Complete automatic DROP/CLOSE/LIFT/RETURN/OPEN/SETTLE with deliberate manual holds and Continue. Prize never reset. Oscillation criterion is every REVIEW arm speed <=0.05 rad/s. Head-to-carriage LockConstraint anchor separation is checked against a conservative 1 mm numerical bound. Active actuator/carriage means no passive energy assertion.");
+    report("sustained-mechanism", { peakContact, cycles, invalidPhysics, maximumPenetrationM, maximumJointEscapeM, jointMeasurements, hingeAngleRangesRad, maximumHingeLimitViolationRad, terminalWindowTicks, growthComparisons, initialBodyCount: bodyCount }, { twentyCompleteCycles: cycles.length === 20 && cycles.every(value => value.phase === "REVIEW"), finitePhysics: !invalidPhysics, noJointEscape: jointIntegrity, completeTerminalWindows: completeWindows, boundedResidualMotion, noGrowingOscillation, noBodyLeakOrPrizeRecreation: cycles.every(value => value.bodyCount === bodyCount && value.prizeInstanceId === prizeId) }, "Complete automatic DROP/CLOSE/LIFT/RETURN/OPEN/SETTLE with deliberate manual holds and Continue. Prize never reset. All four joint anchors and locked rotations/hinge bounds are sampled every fixed tick including manual travel and REVIEW. Anchor bound 1 mm; angular numerical allowance is the sourced 0.02 rad tolerance. Every cycle adds a 120-tick REVIEW window measuring all four dynamic mechanism bodies; peak angular/linear speeds <=0.05 rad/s and 0.005 m/s, arm excursion <=0.02 rad. For peak/RMS speeds and mean/peak kinetic energy, each later window and the final three-window mean must stay within 110% of the first three-window baseline plus the declared numerical floors. Active actuator/carriage means no passive energy assertion.");
     expect(cycles).toHaveLength(20); expect(cycles.every(value => value.phase === "REVIEW")).toBe(true);
-    expect(invalidPhysics).toBe(false); expect(maximumJointEscapeM).toBeLessThanOrEqual(.001);
-    expect(cycles.every(value => value.terminalAngularSpeedRadps <= .05)).toBe(true);
+    expect.soft(invalidPhysics).toBe(false);
+    expect.soft(jointIntegrity, JSON.stringify(jointMeasurements)).toBe(true);
+    expect.soft(noGrowingOscillation, JSON.stringify(growthComparisons)).toBe(true);
     expect(cycles.every(value => value.bodyCount === bodyCount && value.prizeInstanceId === prizeId)).toBe(true);
     expect(maximumPenetrationM).toBeLessThanOrEqual(.001);
   }, 60_000);

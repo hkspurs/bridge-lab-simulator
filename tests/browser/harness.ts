@@ -37,6 +37,9 @@ export async function phase(page: Page, value: string, timeout = 30_000) {
   await expect(page.getByTestId("bridge-lab-app")).toHaveAttribute("data-phase", value, { timeout });
 }
 export async function hold(page: Page, axis: 1 | 2, ticks = 42) {
+  // dispatchEvent has no actionability wait; Resume updates enabled state only
+  // on the next authoritative snapshot. Wait for that state, not wall time.
+  await expect(page.getByRole("button", { name: axis === 1 ? "1 Move right" : "2 Move back", exact: true })).toBeEnabled();
   await pointer(page, axis, "pointerdown");
   const before = await latest(page);
   await expect.poll(async () => (await latest(page)).fixedStepCount - before.fixedStepCount).toBeGreaterThanOrEqual(ticks);

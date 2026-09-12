@@ -10,6 +10,10 @@ import "@babylonjs/core/Physics/v2/physicsEngineComponent";
 import { Vector3, Quaternion } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
+import { Ray } from "@babylonjs/core/Culling/ray";
+import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
+import { playableClawProfile } from "../../src/config/playableClawProfile";
+import type { ClawProfile } from "../../src/config/clawProfile";
 import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
 import { LockConstraint } from "@babylonjs/core/Physics/v2/physicsConstraint";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
@@ -26,7 +30,7 @@ beforeAll(async () => {
   havok = await HavokPhysics({ wasmBinary: Uint8Array.from(wasmBinary).buffer });
 });
 afterEach(() => cleanups.splice(0).forEach(f => f()));
-function fixture(profile = clawProfile) {
+function fixture(profile: ClawProfile = clawProfile) {
   const engine = new NullEngine();
   const scene = new Scene(engine);
   const plugin = new HavokPlugin(true, havok);
@@ -324,4 +328,131 @@ describe("real Havok finite-torque claw", () => {
     rig.dispose();
     expect((scene.getPhysicsEngine()! as PhysicsEngine).getBodies()).toHaveLength(before - rig.bodies.length);
   });
+});
+
+
+describe("photo-reference folded playable arms", () => {
+  it("has solid outreach, elbow, downfold and toe with an empty bend cavity in real Havok", () => {
+    const { scene, rig } = fixture(playableClawProfile);
+    const plugin = scene.getPhysicsEngine()!.getPhysicsPlugin() as HavokPlugin;
+    for (const [index, side] of [-1, 1].entries()) {
+      const angle = side * playableClawProfile.openAngleRad.value;
+      const hinge = rig.head.transformNode.position.add(new Vector3(side * playableClawProfile.hingeHalfSpacingM.value, 0, 0));
+      const probe = (x: number, y: number) => {
+        const point = hinge.add(new Vector3(side * x * Math.cos(angle) - y * Math.sin(angle), side * x * Math.sin(angle) + y * Math.cos(angle), 0));
+        const result = new PhysicsRaycastResult();
+        plugin.raycast(point.add(new Vector3(0, 0, -.1)), point.add(new Vector3(0, 0, .1)), result);
+        const visible = scene.pickWithRay(new Ray(point.add(new Vector3(0, 0, -.1)), Vector3.Forward(), .2),
+          mesh => mesh.isDescendantOf(rig.arms[index].transformNode));
+        expect(visible?.hit ?? false, `visible plate and physical surface agree at ${index},${x},${y}`).toBe(result.hasHit);
+        return result;
+      };
+      for (const [x, y] of [[.0275, -.0175], [.055, -.036], [.055, -.08], [.050, -.145]]) {
+        const hit = probe(x, y);
+        expect(hit.hasHit, `arm ${index}: solid at (${x}, ${y})`).toBe(true);
+        expect(hit.body).toBe(rig.arms[index]);
+      }
+      expect(probe(.025, -.085).hasHit, "bend cavity remains empty").toBe(false);
+    }
+  });
+  it("uses the same visible plates and rigid compound with shape-derived mass and inertia", () => {
+    const { scene, rig } = fixture(playableClawProfile);
+    expect(rig.bodies).toHaveLength(5);
+    const lengths = [Math.hypot(.055, .035), .095, Math.hypot(.01, .03)];
+    const widths = [.008, .008, .004];
+    const volumes = lengths.map((length, i) => length * widths[i] * .025);
+    const totalVolume = volumes.reduce((a, b) => a + b);
+    const centers = [[.0275, -.0175], [.055, -.0825], [.050, -.145]];
+    const masses = volumes.map(volume => .025 * volume / totalVolume);
+    const cx = centers.reduce((sum, p, i) => sum + p[0] * masses[i], 0) / .025;
+    const cy = centers.reduce((sum, p, i) => sum + p[1] * masses[i], 0) / .025;
+    const izz = centers.reduce((sum, p, i) => sum + masses[i] * (
+      (lengths[i] ** 2 + widths[i] ** 2) / 12 + (p[0] - cx) ** 2 + (p[1] - cy) ** 2), 0);
+    for (const [index, arm] of rig.arms.entries()) {
+      const plates = arm.transformNode.getChildMeshes();
+      expect(plates).toHaveLength(3);
+      expect(plates.every(mesh => !mesh.physicsBody && mesh.material!.alpha < 1)).toBe(true);
+      expect(arm.shape!.getNumChildren()).toBe(3);
+      const mass = arm.getMassProperties();
+      expect(mass.mass).toBeCloseTo(.025, 7);
+      expect(mass.centerOfMass!.x).toBeCloseTo((index === 0 ? -1 : 1) * cx, 6);
+      expect(mass.centerOfMass!.y).toBeCloseTo(cy, 6);
+      arm.applyAngularImpulse(new Vector3(0, 0, izz));
+      // Native compound mass integration differs by 0.17% from ideal boxes.
+      expect(arm.getAngularVelocity().z).toBeCloseTo(1, 2);
+    }
+    const bodiesBefore = (scene.getPhysicsEngine()! as PhysicsEngine).getBodies().length;
+    const materials = rig.arms.map(arm => arm.transformNode.getChildMeshes()[0].material!);
+    rig.dispose(); rig.dispose();
+    expect((scene.getPhysicsEngine()! as PhysicsEngine).getBodies()).toHaveLength(bodiesBefore - 5);
+    expect(scene.meshes.filter(mesh => mesh.name.startsWith("claw"))).toHaveLength(0);
+    expect(scene.materials.some(material => materials.includes(material))).toBe(false);
+  });
+
+  it("blocks a 140 mm prize with actual capped hinge torque and load-cell reaction", () => {
+    const { rig, step, obstacle } = fixture(playableClawProfile);
+    const cells = obstacle(.14);
+    rig.command({ travel: "stop", claw: "close" });
+    let contacts = 0, minForce = Infinity, maxForce = 0, maxRatio = 0, maxPenetration = 0;
+    let maxTorque = 0, maxLimit = 0;
+    for (let tick = 0; tick < 720; tick++) {
+      step();
+      for (const contact of rig.contactSamples()) maxPenetration = Math.max(maxPenetration, -contact.distanceM);
+      if (tick > 480) {
+        contacts += rig.contactSamples().filter(contact => contact.otherBodyName === "load cell cheek").length;
+        for (const cell of cells) {
+          const reaction = impulses(cell.joint)[1];
+          const force = Math.hypot(reaction[0] * 120, reaction[1] * 120 - 9.80665, reaction[2] * 120);
+          minForce = Math.min(minForce, force); maxForce = Math.max(maxForce, force);
+        }
+        for (const sample of rig.actuatorSamples()) {
+          const torque = Math.abs(havok.HP_Constraint_GetAppliedImpulses(rig.joints[sample.armIndex]._pluginData[0])[2][2]) * 120;
+          maxRatio = Math.max(maxRatio, torque / sample.torqueLimitNm);
+          maxTorque = Math.max(maxTorque, torque); maxLimit = Math.max(maxLimit, sample.torqueLimitNm);
+        }
+      }
+    }
+    const blocked = rig.actuatorSamples().every(sample => sample.angleRad > playableClawProfile.closedAngleRad.value + .03);
+    report("reference-folded-claw-0.14", { contacts, minimumQuasiStaticForceN: minForce, maximumQuasiStaticForceN: maxForce,
+      maximumTorqueRatio: maxRatio, maximumAppliedTorqueNm: maxTorque, maximumCommandedTorqueNm: maxLimit,
+      maximumPenetrationM: maxPenetration, anglesRad: rig.actuatorSamples().map(sample => sample.angleRad) },
+    { actualContact: contacts > 0 && minForce > .05, closureBlocked: blocked, nativeTorqueCapped: maxRatio <= 1.001,
+      forceWithin105Percent: maxForce <= playableClawProfile.peakContactForceN.value * 1.05 },
+    "Folded playable geometry, unchanged 120 Hz/gravity/actuator settings. Load-cell resultant removes cell weight; native world-Z angular impulse divided by dt is actual hinge torque. Penetration reported independently.");
+    expect(contacts).toBeGreaterThan(0);
+    expect(blocked).toBe(true);
+    expect(minForce).toBeGreaterThan(.05);
+    expect(maxForce).toBeLessThanOrEqual(playableClawProfile.peakContactForceN.value * 1.05);
+    expect(maxRatio).toBeLessThanOrEqual(1.001);
+    rig.command({ travel: "stop", claw: "open" });
+    step(600);
+    expect(rig.observe().openReached).toBe(true);
+    expect(rig.observe().invalidPhysics).toBe(false);
+  });
+
+  it("backdrives the folded rigid arm under external load while saturating its finite holding motor", () => {
+    const { rig, step } = fixture(playableClawProfile);
+    rig.command({ travel: "stop", claw: "close" });
+    step(600);
+    const initial = rig.actuatorSamples().map(sample => sample.angleRad);
+    expect(initial.every(angle => Math.abs(angle - playableClawProfile.closedAngleRad.value) < .02)).toBe(true);
+    rig.command({ travel: "stop", claw: "hold" });
+    let maximumRatio = 0;
+    for (let tick = 0; tick < 100; tick++) {
+      for (const [index, arm] of rig.arms.entries()) arm.applyAngularImpulse(new Vector3(0, 0, (index === 0 ? -1 : 1) * .8 / 120));
+      step();
+      // Sample before hard stops; stop reaction is distinct from motor torque.
+      for (const sample of rig.actuatorSamples()) if (sample.angleRad < .6) {
+        const torque = Math.abs(havok.HP_Constraint_GetAppliedImpulses(rig.joints[sample.armIndex]._pluginData[0])[2][2]) * 120;
+        maximumRatio = Math.max(maximumRatio, torque / sample.torqueLimitNm);
+      }
+    }
+    const final = rig.actuatorSamples().map(sample => sample.angleRad);
+    report("reference-folded-backdrive", { maximumRatio, initialAnglesRad: initial, finalAnglesRad: final },
+      { saturated: maximumRatio > .95, capped: maximumRatio <= 1.001, backdriven: final.every((angle, i) => angle - initial[i] > .2) });
+    expect(maximumRatio).toBeGreaterThan(.95);
+    expect(maximumRatio).toBeLessThanOrEqual(1.001);
+    final.forEach((angle, index) => expect(angle - initial[index]).toBeGreaterThan(.2));
+  });
+
 });

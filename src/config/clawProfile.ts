@@ -16,6 +16,12 @@ export const clawProfile = {
   armLengthM: estimate("armLengthM", .16, "m", [.1, .25]),
   armThicknessM: estimate("armThicknessM", .008, "m", [.004, .015]),
   armDepthM: estimate("armDepthM", .025, "m", [.015, .04]),
+  // Zero outreach preserves the independently calibrated straight-arm fixture.
+  armOutreachM: estimate("armOutreachM", 0, "m", [0, .09]),
+  elbowDropM: estimate("elbowDropM", .035, "m", [.02, .06]),
+  toeLengthM: estimate("toeLengthM", .03, "m", [.015, .05]),
+  toeInsetM: estimate("toeInsetM", .01, "m", [0, .02]),
+  toeThicknessM: estimate("toeThicknessM", .004, "m", [.002, .008]),
   armMassKg: estimate("armMassKg", .025, "kg", [.01, .08]),
   stemMassKg: estimate("stemMassKg", .025, "kg", [.01, .08]),
   headMassKg: estimate("headMassKg", .3, "kg", [.1, 1]),
@@ -59,6 +65,11 @@ const parameterRules: Record<ParameterKey, ParameterRule> = {
   armLengthM: { unit: "m", positive: true },
   armThicknessM: { unit: "m", positive: true },
   armDepthM: { unit: "m", positive: true },
+  armOutreachM: { unit: "m", minimum: 0 },
+  elbowDropM: { unit: "m", positive: true },
+  toeLengthM: { unit: "m", positive: true },
+  toeInsetM: { unit: "m", minimum: 0 },
+  toeThicknessM: { unit: "m", positive: true },
   armMassKg: { unit: "kg", positive: true },
   stemMassKg: { unit: "kg", positive: true },
   headMassKg: { unit: "kg", positive: true },
@@ -123,6 +134,12 @@ export function validateClawProfile(input: unknown): asserts input is ClawProfil
 
   // Fields are complete and physically typed after the required-key loop.
   const valid = profile as unknown as ClawProfile;
+  if (valid.armOutreachM.value > 0 &&
+    (valid.elbowDropM.value + valid.toeLengthM.value >= valid.armLengthM.value ||
+      valid.toeInsetM.value >= valid.armOutreachM.value ||
+      valid.toeThicknessM.value > valid.armThicknessM.value)) {
+    throw new Error("Invalid folded arm geometry ordering");
+  }
   if (valid.holdingContactForceN.value > valid.peakContactForceN.value ||
     valid.closedAngleRad.value >= valid.openAngleRad.value ||
     valid.dropHeightM.value >= valid.homeHeightM.value) {

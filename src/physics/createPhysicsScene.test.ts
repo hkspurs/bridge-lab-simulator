@@ -91,6 +91,21 @@ describe("Havok calibration scene", () => {
     expect(handle.sequence!.phase).toBe("MOVE_AXIS_1");
   });
 
+  it("treats duplicate resume while running as a no-op", async () => {
+    const handle = await setup(structuredClone(playableProfile));
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(1000 / 120);
+    const frame = handle.engine.activeRenderLoops[0];
+    const executeStep = vi.spyOn(handle.scene.getPhysicsEngine()!.getPhysicsPlugin()!, "executeStep");
+    handle.dispatch({ type: "press", axis: 1 });
+    frame();
+    const before = handle.rig!.bodies[0].transformNode.position.x;
+    handle.dispatch({ type: "resume" });
+    frame();
+    expect(handle.sequence!.phase).toBe("MOVE_AXIS_1");
+    expect(executeStep).toHaveBeenCalledTimes(2);
+    expect(handle.rig!.bodies[0].transformNode.position.x).toBeGreaterThan(before);
+  });
+
   it("resets the physical world only through explicit New setup", async () => {
     const handle = await setup(structuredClone(playableProfile));
     vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(1000 / 60);
@@ -103,6 +118,12 @@ describe("Havok calibration scene", () => {
     expect(handle.sequence!.phase).toBe("READY");
     expect(handle.rig!.bodies[0].transformNode.position.x).toBeCloseTo(0, 8);
     expect(handle.prize.position.equalsWithEpsilon(initialPrize, 1e-8)).toBe(true);
+    frame();
+    frame();
+    expect(handle.rig!.bodies[0].transformNode.position.x).toBeCloseTo(0, 6);
+    expect(handle.rig!.bodies.every(body => body.getLinearVelocity().length() < .01)).toBe(true);
+    expect(handle.prize.position.subtract(initialPrize).length()).toBeLessThan(.01);
+    expect(handle.prize.physicsBody!.getLinearVelocity().length()).toBeLessThan(.5);
   });
   it("builds exactly two dimensioned cylindrical static rods and a dynamic prize", async () => {
     const profile = structuredClone(baselineProfile);

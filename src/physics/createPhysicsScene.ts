@@ -180,6 +180,7 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Sup
         return;
       }
       if (event.type === "resume") {
+        if (!paused) return;
         sequence.dispatch(event);
         rig.command({ travel: "stop", claw: "hold" });
         clock.discardAccumulatedTime();
@@ -195,7 +196,10 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Sup
         body.transformNode.position.copyFrom(position);
         body.transformNode.rotationQuaternion!.copyFrom(rotation);
         body.transformNode.computeWorldMatrix(true);
-        body.setTargetTransform(position, rotation);
+        const disabledPreStep = body.disablePreStep;
+        body.disablePreStep = false;
+        plugin.setPhysicsBodyTransformation(body, body.transformNode);
+        body.disablePreStep = disabledPreStep;
         body.setLinearVelocity(Vector3.Zero());
         body.setAngularVelocity(Vector3.Zero());
       }

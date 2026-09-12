@@ -13,6 +13,17 @@ export interface DiagnosticSnapshot {
   readonly rotation: Readonly<{ x: number; y: number; z: number; w: number }>;
   readonly fixedStepCount: number;
   readonly renderFps: number;
+  readonly profileId?: string;
+  readonly phase?: import("../crane/types").Phase;
+  readonly paused?: boolean;
+  readonly droppedWallSeconds?: number;
+  readonly prizeLinearVelocity?: Readonly<{ x: number; y: number; z: number }>;
+  readonly prizeAngularVelocity?: Readonly<{ x: number; y: number; z: number }>;
+  readonly clawAnglesRad?: readonly number[];
+  readonly clawTargetAnglesRad?: readonly number[];
+  readonly actuatorTorqueLimitsNm?: readonly number[];
+  readonly contacts?: readonly import("../physics/createClaw").ContactSample[];
+  readonly prizeOutOfReach?: boolean;
 }
 
 export interface DiagnosticsOptions {

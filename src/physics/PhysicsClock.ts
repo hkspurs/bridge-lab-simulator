@@ -66,4 +66,9 @@ export class PhysicsClock {
       droppedSeconds,
     };
   }
+
+  /** Drops fractional wall time when simulation is interrupted or reset. */
+  public discardAccumulatedTime(): void {
+    this.accumulatorSeconds = 0;
+  }
 }

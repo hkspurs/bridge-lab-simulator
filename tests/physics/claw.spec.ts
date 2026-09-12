@@ -178,12 +178,14 @@ describe("real Havok finite-torque claw", () => {
       step();
       const current = carriage.getLinearVelocity();
       maxSpeed = Math.max(maxSpeed, current.length());
-      maxAcceleration = Math.max(maxAcceleration, current.subtract(previous).length() * 120);
+      if (travel !== "stop") maxAcceleration = Math.max(maxAcceleration, current.subtract(previous).length() * 120);
     } };
     run("axis1");
     expect(carriage.transformNode.position.x).toBeCloseTo(clawProfile.travelRangeM.value, 3);
+    expect(rig.observe().atAxis1Limit).toBe(true);
     run("axis2");
     expect(carriage.transformNode.position.z).toBeCloseTo(clawProfile.travelRangeM.value, 3);
+    expect(rig.observe().atAxis2Limit).toBe(true);
     run("down");
     expect(rig.observe().atDropLimit).toBe(true);
     run("up");
@@ -196,6 +198,28 @@ describe("real Havok finite-torque claw", () => {
     console.log(JSON.stringify({ maxTravelSpeed: maxSpeed, maxTravelAcceleration: maxAcceleration }));
     expect(maxSpeed).toBeLessThanOrEqual(clawProfile.maximumTravelSpeedMps.value * 1.001);
     expect(maxAcceleration).toBeLessThanOrEqual(clawProfile.maximumTravelAccelerationMps2.value * 1.001);
+  });
+  it("stops manual carriage drive in the first tick after cancellation", () => {
+    const { rig, step } = fixture();
+    const carriage = rig.bodies[0];
+    rig.command({ travel: "axis1", claw: "open" });
+    step(30);
+    expect(carriage.getLinearVelocity().x).toBeGreaterThan(0);
+    rig.command({ travel: "stop", claw: "hold" });
+    step();
+    expect(carriage.getLinearVelocity().length()).toBeLessThan(1e-8);
+    const stoppedAt = carriage.transformNode.position.clone();
+    step(30);
+    expect(carriage.transformNode.position.subtract(stoppedAt).length()).toBeLessThan(1e-8);
+  });
+  it("holds the last claw target while travelling", () => {
+    const { rig, step } = fixture();
+    rig.command({ travel: "axis1", claw: "hold" });
+    step(360);
+    for (const sample of rig.actuatorSamples()) {
+      expect(sample.targetAngleRad).toBe(clawProfile.openAngleRad.value);
+      expect(Math.abs(sample.angleRad - clawProfile.openAngleRad.value)).toBeLessThan(.02);
+    }
   });
   it("allows an unsupported heavy prize to slip under gravity with no attachment joint", () => {
     const { rig, step, box, remove } = fixture();

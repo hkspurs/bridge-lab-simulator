@@ -9,6 +9,8 @@ import { Vector3, Matrix } from "@babylonjs/core/Maths/math.vector";
 import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { baselineProfile } from "../config/baselineProfile";
+import { playableProfile } from "../config/playableProfile";
+import type { SupportedCalibrationProfile } from "../config/types";
 import { createPhysicsScene, type PhysicsSceneHandle } from "./createPhysicsScene";
 import { toPhysicsMassProperties } from "./createPrize";
 
@@ -19,7 +21,7 @@ beforeAll(async () => {
   havok = await HavokPhysics({ wasmBinary: Uint8Array.from(wasmBinary).buffer });
 });
 afterEach(() => handles.splice(0).forEach((handle) => handle.dispose()));
-async function setup(profile = structuredClone(baselineProfile)) {
+async function setup(profile: SupportedCalibrationProfile = structuredClone(baselineProfile)) {
   const handle = await createPhysicsScene({} as HTMLCanvasElement, profile, {
     createEngine: () => new NullEngine(),
     initializeHavok: async () => havok,
@@ -29,6 +31,79 @@ async function setup(profile = structuredClone(baselineProfile)) {
 }
 
 describe("Havok calibration scene", () => {
+  it("runs the playable rig through two real attempts without replacing the prize", async () => {
+    const handle = await setup(structuredClone(playableProfile));
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(100);
+    const frame = handle.engine.activeRenderLoops[0];
+    const runAttempt = () => {
+      handle.dispatch({ type: "press", axis: 1 }); frame();
+      handle.dispatch({ type: "release", axis: 1 });
+      handle.dispatch({ type: "press", axis: 2 }); frame();
+      handle.dispatch({ type: "release", axis: 2 });
+      for (let i = 0; i < 250 && handle.sequence!.phase !== "REVIEW" && handle.sequence!.phase !== "FAULT"; i++) frame();
+      expect(handle.sequence!.phase).toBe("REVIEW");
+    };
+    const identity = handle.prize.physicsBody;
+    runAttempt();
+    const pose = handle.prize.position.clone();
+    const velocity = handle.prize.physicsBody!.getLinearVelocity().clone();
+    handle.dispatch({ type: "continue" });
+    expect(handle.prize.physicsBody).toBe(identity);
+    expect(handle.prize.position.equalsWithEpsilon(pose, 1e-12)).toBe(true);
+    expect(handle.prize.physicsBody!.getLinearVelocity().equalsWithEpsilon(velocity, 1e-12)).toBe(true);
+    runAttempt();
+  }, 20_000);
+
+  it("freezes interruption time and resumes with a stopped carriage", async () => {
+    const handle = await setup(structuredClone(playableProfile));
+    const frame = handle.engine.activeRenderLoops[0];
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(1000 / 120);
+    handle.dispatch({ type: "press", axis: 1 });
+    for (let i = 0; i < 30; i++) frame();
+    const carriage = handle.rig!.bodies[0];
+    expect(carriage.getLinearVelocity().x).toBeGreaterThan(0);
+    handle.dispatch({ type: "cancel" });
+    const stoppedPose = carriage.transformNode.position.clone();
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(10_000);
+    frame();
+    expect(carriage.transformNode.position.equalsWithEpsilon(stoppedPose, 1e-12)).toBe(true);
+    handle.dispatch({ type: "resume" });
+    const executeStep = vi.spyOn(handle.scene.getPhysicsEngine()!.getPhysicsPlugin()!, "executeStep");
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(10_000);
+    frame();
+    expect(executeStep).not.toHaveBeenCalled();
+    expect(carriage.transformNode.position.equalsWithEpsilon(stoppedPose, 1e-12)).toBe(true);
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(1000 / 240);
+    frame();
+    expect(carriage.transformNode.position.equalsWithEpsilon(stoppedPose, 1e-12)).toBe(true);
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(1000 / 120);
+    frame();
+    expect(carriage.getLinearVelocity().length()).toBeLessThan(1e-8);
+  });
+
+  it("ignores controls while the world is paused until explicit resume", async () => {
+    const handle = await setup(structuredClone(playableProfile));
+    handle.dispatch({ type: "cancel" });
+    handle.dispatch({ type: "press", axis: 1 });
+    expect(handle.sequence!.phase).toBe("READY");
+    handle.dispatch({ type: "resume" });
+    handle.dispatch({ type: "press", axis: 1 });
+    expect(handle.sequence!.phase).toBe("MOVE_AXIS_1");
+  });
+
+  it("resets the physical world only through explicit New setup", async () => {
+    const handle = await setup(structuredClone(playableProfile));
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(1000 / 60);
+    const frame = handle.engine.activeRenderLoops[0];
+    const initialPrize = handle.prize.position.clone();
+    handle.dispatch({ type: "press", axis: 1 });
+    for (let i = 0; i < 30; i++) frame();
+    expect(handle.rig!.bodies[0].transformNode.position.x).toBeGreaterThan(0);
+    handle.newSetup();
+    expect(handle.sequence!.phase).toBe("READY");
+    expect(handle.rig!.bodies[0].transformNode.position.x).toBeCloseTo(0, 8);
+    expect(handle.prize.position.equalsWithEpsilon(initialPrize, 1e-8)).toBe(true);
+  });
   it("builds exactly two dimensioned cylindrical static rods and a dynamic prize", async () => {
     const profile = structuredClone(baselineProfile);
     profile.bridge.rodHeightDeltaM.value = 0.01;
@@ -120,6 +195,10 @@ describe("Havok calibration scene", () => {
     expect(Object.isFrozen(snapshot)).toBe(true);
     expect(Object.isFrozen(snapshot.position)).toBe(true);
     expect(Object.isFrozen(snapshot.rotation)).toBe(true);
+    expect(Object.isFrozen(snapshot.prizeLinearVelocity)).toBe(true);
+    expect(Object.isFrozen(snapshot.prizeAngularVelocity)).toBe(true);
+    expect(Object.isFrozen(snapshot.clawAnglesRad)).toBe(true);
+    expect(Object.isFrozen(snapshot.contacts)).toBe(true);
     expect(snapshot.fixedStepCount).toBe(2);
     expect(snapshot.renderFps).toBeCloseTo(60);
     unsubscribe();

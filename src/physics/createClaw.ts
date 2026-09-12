@@ -142,6 +142,7 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
     return arm;
   });
   let command: RigCommand = Object.freeze({ travel: "stop", claw: "open" });
+  let targetClawAngle = v("openAngleRad");
   let disposed = false;
   const angle = (index: number) => {
     const q = head.transformNode.rotationQuaternion!.conjugate()
@@ -177,6 +178,9 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
       target.z = approach(-position.z);
       target.y = approach(v("homeHeightM") - position.y);
     }
+    // A released/cancelled manual drive is a locked carriage axis. Clear the
+    // animated body's retained velocity in this tick so resume cannot drift.
+    if (command.travel === "stop") current.setAll(0);
     if (target.length() > speed)
       target.normalize().scaleInPlace(speed);
     const delta = target.subtract(current);
@@ -185,7 +189,9 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
     carriage.setLinearVelocity(current.add(delta));
     samples = arms.map((_, index) => {
       const actual = angle(index);
-      const targetAngle = command.claw === "open" ? v("openAngleRad") : v("closedAngleRad");
+      if (command.claw === "open") targetClawAngle = v("openAngleRad");
+      if (command.claw === "close") targetClawAngle = v("closedAngleRad");
+      const targetAngle = targetClawAngle;
       const moments = lastContacts.filter(c => c.armIndex === index && c.momentArmM > 0).map(c => c.momentArmM);
       const lever = moments.length ? Math.min(...moments) : Math.abs(v("armLengthM") * Math.cos(actual));
       const demand = motorDemand(actual, targetAngle, lever, command.claw, profile);
@@ -203,6 +209,8 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
     }))),
     contactSamples: () => Object.freeze([...contacts]),
     observe: () => Object.freeze({
+      atAxis1Limit: Math.abs(carriage.transformNode.position.x - v("travelRangeM")) < v("positionToleranceM"),
+      atAxis2Limit: Math.abs(carriage.transformNode.position.z - v("travelRangeM")) < v("positionToleranceM"),
       atDropLimit: Math.abs(carriage.transformNode.position.y - v("dropHeightM")) < v("positionToleranceM"),
       atLiftLimit: Math.abs(carriage.transformNode.position.y - v("homeHeightM")) < v("positionToleranceM"),
       atHome: carriage.transformNode.position.subtract(new Vector3(0, v("homeHeightM"), 0))

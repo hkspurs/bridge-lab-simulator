@@ -63,7 +63,7 @@ test("camera drag and pinch change view without starting a claw attempt", async 
   const cdp = browserName === "chromium" ? await page.context().newCDPSession(page) : undefined;
   if (cdp) await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
   await start(page);
-  expect(await page.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThanOrEqual(2);
+  if (cdp) expect(await page.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThanOrEqual(2);
   const canvas = page.locator("canvas");
   const bounds = (await canvas.boundingBox())!;
   const x = bounds.x + bounds.width * .4, y = bounds.y + bounds.height * .5;

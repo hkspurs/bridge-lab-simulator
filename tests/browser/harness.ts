@@ -9,6 +9,16 @@ declare global { interface Window { acceptanceSnapshots: DiagnosticSnapshot[]; a
 export async function start(page: Page) {
   await page.goto("/bridge-lab-simulator/");
   await expect(page.getByTestId("bridge-lab-app")).toHaveAttribute("data-phase", "READY", { timeout: 30_000 });
+  // A synthetic event can reach an off-screen control. Verify the actual
+  // landscape play buttons are fully visible and not covered before using it.
+  for (const name of ["1 Move right", "2 Move back"]) {
+    const button = page.getByRole("button", { name, exact: true });
+    await expect(button).toBeInViewport({ ratio: 1 });
+    expect(await button.evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      return element.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2));
+    })).toBe(true);
+  }
   await page.evaluate(() => {
     window.acceptanceSnapshots = [];
     window.acceptanceFrozen = true;

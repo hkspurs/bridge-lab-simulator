@@ -18,7 +18,7 @@ h1 { margin: 0; font-size: clamp(1rem, 3.8vw, 1.4rem); letter-spacing: -.02em; }
 button:hover:not(:disabled) { background: #28323a; }
 button:disabled { color: #858b90; border-color: #3b4247; background: #171c20; cursor: not-allowed; }
 .machine-stage { position: relative; min-height: 0; overflow: hidden; border-radius: 14px; background: #101820; box-shadow: 0 10px 28px rgb(0 0 0 / 38%); }
-canvas { display: block; width: 100%; height: 100%; touch-action: auto; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 [data-testid="app-status"] { min-height: 1.4em; margin: 0; text-align: center; color: #e9dfcf; font-size: .88rem; }
 .movement-controls { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
 .move-control { display: flex; align-items: center; justify-content: center; gap: .65rem; min-height: 64px; border: 0; border-radius: 14px; background: #b2252e; box-shadow: 0 7px 18px rgb(0 0 0 / 34%); font-weight: 800; touch-action: none; user-select: none; -webkit-user-select: none; }
@@ -35,9 +35,11 @@ canvas { display: block; width: 100%; height: 100%; touch-action: auto; }
 .portrait-message { display: none; }
 @media (orientation: portrait) {
   .machine-stage { display: grid; place-items: center; }
-  .machine-stage canvas { opacity: .3; pointer-events: none; }
-  .portrait-message { display: block; position: absolute; margin: 1rem; text-align: center; font-weight: 800; }
+  .machine-stage canvas { opacity: 1; }
+  .portrait-message { display: block; position: absolute; bottom: .5rem; margin: 1rem; text-align: center; font-weight: 800; pointer-events: none; }
   .movement-controls { pointer-events: none; opacity: .42; }
 }
 @media (min-width: 900px) { [data-testid="bridge-lab-app"] { max-width: 1100px; margin-inline: auto; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+.camera-hint { position: absolute; top: .4rem; left: .6rem; margin: 0; color: #c1cbd2; font-size: .7rem; pointer-events: none; }

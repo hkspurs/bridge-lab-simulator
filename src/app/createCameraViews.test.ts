@@ -17,7 +17,11 @@ describe("camera presets", () => {
     const frontAlpha = camera.alpha;
     views.select("side");
     expect(camera.alpha).not.toBe(frontAlpha);
-    expect(camera.inputs.attached).toEqual({});
+    expect(camera.inputs.attached.pointers).toBeDefined();
+    expect(camera.lowerRadiusLimit).toBeLessThan(camera.upperRadiusLimit!);
+    camera.inertialAlphaOffset = 1;
+    views.select("front");
+    expect(camera.inertialAlphaOffset).toBe(0);
     views.dispose();
     scene.dispose(); engine.dispose();
   });

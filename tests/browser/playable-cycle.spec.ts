@@ -58,3 +58,33 @@ test("retains successful front, side and portrait framing evidence", async ({ pa
   await page.screenshot({ path: info.outputPath("portrait.png"), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test("camera drag and pinch change view without starting a claw attempt", async ({ page }) => {
+  await start(page);
+  const canvas = page.locator("canvas");
+  const bounds = (await canvas.boundingBox())!;
+  const x = bounds.x + bounds.width * .4, y = bounds.y + bounds.height * .5;
+  const before = (await latest(page)).camera!;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 100, y + 20, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(async () => Math.abs((await latest(page)).camera!.alpha - before.alpha)).toBeGreaterThan(.05);
+  await phase(page, "READY");
+  await page.getByRole("button", { name: "Front", exact: true }).click();
+  await expect.poll(async () => (await latest(page)).camera!.alpha).toBeCloseTo(-Math.PI / 2, 4);
+  // Synthetic touch input with capture shim; native iPhone gestures remain a device check.
+  await canvas.evaluate(element => { element.setPointerCapture = () => {}; element.releasePointerCapture = () => {}; });
+  const touch = (type: string, id: number, px: number) => canvas.dispatchEvent(type, {
+    pointerId: id, pointerType: "touch", isPrimary: id === 11, clientX: px, clientY: y,
+    button: 0, buttons: type === "pointerup" ? 0 : 1, bubbles: true,
+  });
+  await touch("pointerdown", 11, x);
+  await touch("pointerdown", 12, x + 40);
+  await touch("pointermove", 12, x + 60);
+  await touch("pointermove", 12, x + 100);
+  await touch("pointerup", 12, x + 100);
+  await touch("pointerup", 11, x);
+  await expect.poll(async () => Math.abs((await latest(page)).camera!.radius - .78)).toBeGreaterThan(.001);
+  await phase(page, "READY");
+});

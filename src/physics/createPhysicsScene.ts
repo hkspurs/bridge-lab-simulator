@@ -157,6 +157,11 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Sup
         actuatorTorqueLimitsNm: Object.freeze(actuator.map(value => value.torqueLimitNm)),
         contacts: Object.freeze((rig?.contactSamples() ?? []).map(value => Object.freeze({ ...value, normal: Object.freeze({ ...value.normal }) }))),
         prizeOutOfReach: prize.position.y < -profile.prize.heightM.value,
+        prizeInstanceId: prize.uniqueId,
+        ...(rig ? {
+          carriagePosition: Object.freeze({ x: rig.bodies[0].transformNode.position.x, y: rig.bodies[0].transformNode.position.y, z: rig.bodies[0].transformNode.position.z }),
+          carriageLinearVelocity: Object.freeze({ x: rig.bodies[0].getLinearVelocity().x, y: rig.bodies[0].getLinearVelocity().y, z: rig.bodies[0].getLinearVelocity().z }),
+        } : {}),
       });
       listeners.forEach((listener) => listener(snapshot));
       // Babylon syncs current physics pose in executeStep; it has no public

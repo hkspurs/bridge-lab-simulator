@@ -25,6 +25,9 @@ export interface DiagnosticSnapshot {
   readonly actuatorTorqueLimitsNm?: readonly number[];
   readonly contacts?: readonly import("../physics/createClaw").ContactSample[];
   readonly prizeOutOfReach?: boolean;
+  readonly prizeInstanceId?: number;
+  readonly carriagePosition?: Readonly<{ x: number; y: number; z: number }>;
+  readonly carriageLinearVelocity?: Readonly<{ x: number; y: number; z: number }>;
 }
 
 export interface DiagnosticsOptions {

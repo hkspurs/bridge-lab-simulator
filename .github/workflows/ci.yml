@@ -4,12 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   verify:
@@ -24,11 +21,29 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:run
+      - run: npm run test:physics
+        if: ${{ !cancelled() }}
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+        if: ${{ !cancelled() }}
+      - run: npx playwright install --with-deps chromium webkit
+        if: ${{ !cancelled() }}
       - run: npm run test:browser
+        if: ${{ !cancelled() }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-evidence
+          path: |
+            test-results/
+            playwright-report/
+            physics-reports/
+          retention-days: 14
 
   deploy:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

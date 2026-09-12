@@ -43,7 +43,6 @@ export function createApp(host: HTMLElement): BridgeLabApp {
   let unsubscribeSnapshots: (() => void) | undefined;
   let controls: ControlsHandle | undefined;
   let cameraViews: ReturnType<typeof createCameraViews> | undefined;
-  let removePortraitListener: (() => void) | undefined;
   const initialization = new AbortController();
   void createPhysicsScene(canvas, playableProfile, { signal: initialization.signal }).then(
     (handle) => {
@@ -55,10 +54,7 @@ export function createApp(host: HTMLElement): BridgeLabApp {
       controls = createControls(root, event => handle.dispatch(event));
       if (typeof window.matchMedia === "function") {
         const portraitQuery = window.matchMedia("(orientation: portrait)");
-        const stopForPortrait = (event: MediaQueryListEvent | MediaQueryList) => { if (event.matches) handle.dispatch({ type: "cancel" }); };
-        portraitQuery.addEventListener("change", stopForPortrait);
-        removePortraitListener = () => portraitQuery.removeEventListener("change", stopForPortrait);
-        stopForPortrait(portraitQuery);
+        if (portraitQuery.matches) handle.dispatch({ type: "cancel" });
       }
       resume.addEventListener("click", () => handle.dispatch({ type: "resume" }));
       next.addEventListener("click", () => handle.dispatch({ type: "continue" }));
@@ -110,7 +106,6 @@ export function createApp(host: HTMLElement): BridgeLabApp {
       disposed = true;
       initialization.abort();
       unsubscribeSnapshots?.();
-      removePortraitListener?.();
       controls?.dispose();
       cameraViews?.dispose();
       diagnostics?.dispose();

@@ -32,8 +32,12 @@ export function createControls(root: HTMLElement, dispatch: (event: InputEvent) 
       current.button.releasePointerCapture(current.id);
     }
   };
-  const cancel = () => {
+  const cancelOwned = () => {
     if (!owner) return;
+    clear(true);
+    dispatch({ type: "cancel" });
+  };
+  const interrupt = () => {
     clear(true);
     dispatch({ type: "cancel" });
   };
@@ -42,7 +46,7 @@ export function createControls(root: HTMLElement, dispatch: (event: InputEvent) 
     const axis = (index + 1) as 1 | 2;
     listen(button, "pointerdown", ((event: PointerEvent) => {
       if (owner) {
-        if (owner.id !== event.pointerId) cancel();
+        if (owner.id !== event.pointerId) cancelOwned();
         return;
       }
       if (button.disabled) return;
@@ -57,7 +61,7 @@ export function createControls(root: HTMLElement, dispatch: (event: InputEvent) 
     }) as EventListener);
     for (const type of ["pointercancel", "pointerleave", "lostpointercapture"]) {
       listen(button, type, ((event: PointerEvent) => {
-        if (owner?.id === event.pointerId && owner.axis === axis) cancel();
+        if (owner?.id === event.pointerId && owner.axis === axis) cancelOwned();
       }) as EventListener);
     }
     listen(button, "keydown", ((event: KeyboardEvent) => {
@@ -75,9 +79,9 @@ export function createControls(root: HTMLElement, dispatch: (event: InputEvent) 
     listen(button, "contextmenu", event => event.preventDefault());
     listen(button, "selectstart", event => event.preventDefault());
   });
-  listen(window, "blur", cancel);
-  listen(window, "orientationchange", cancel);
-  listen(document, "visibilitychange", () => { if (document.visibilityState === "hidden") cancel(); });
+  listen(window, "blur", interrupt);
+  listen(window, "orientationchange", interrupt);
+  listen(document, "visibilitychange", () => { if (document.visibilityState === "hidden") interrupt(); });
 
   buttons[0].disabled = false;
   buttons[1].disabled = true;
@@ -86,7 +90,7 @@ export function createControls(root: HTMLElement, dispatch: (event: InputEvent) 
     update({ phase, paused }) {
       buttons[0].disabled = paused || (phase !== "READY" && phase !== "MOVE_AXIS_1");
       buttons[1].disabled = paused || phase !== "MOVE_AXIS_2";
-      if (owner?.button.disabled) cancel();
+      if (owner?.button.disabled) cancelOwned();
     },
     dispose() { clear(true); cleanups.splice(0).forEach(cleanup => cleanup()); tray.remove(); },
   };

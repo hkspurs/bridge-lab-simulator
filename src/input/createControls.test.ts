@@ -9,7 +9,11 @@ const pointer = (type: string, id: number) => {
 };
 
 describe("touch-safe controls", () => {
-  afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
+  afterEach(() => {
+    document.body.replaceChildren();
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    vi.restoreAllMocks();
+  });
 
   function setup() {
     const root = document.createElement("div");
@@ -62,6 +66,21 @@ describe("touch-safe controls", () => {
       { type: "press", axis: 1 }, { type: "cancel" },
       { type: "press", axis: 1 }, { type: "cancel" },
     ]);
+  });
+
+  it("dispatches lifecycle cancellation during automatic movement without an input owner", () => {
+    const { events, controls } = setup();
+    controls.update({ phase: "DROP", paused: false });
+    window.dispatchEvent(new Event("blur"));
+    window.dispatchEvent(new Event("orientationchange"));
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(events).toEqual([{ type: "cancel" }, { type: "cancel" }, { type: "cancel" }]);
+
+    controls.dispose();
+    window.dispatchEvent(new Event("blur"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(events).toHaveLength(3);
   });
 
   it("supports keyboard holds, disables unavailable stages, and removes listeners on disposal", () => {

@@ -28,6 +28,10 @@
 - This milestone includes functional front/side cameras and a collapsible diagnostic panel. Full replay, A/B comparison, slow-motion playback, sound and final arcade art remain later milestones; they are not removed from the full product spec.
 - Execution authorized by the user’s subsequent “Proceed”. Deployment remains conditional on the acceptance gates below.
 
+## Current playable-preview publication decision
+
+The subsequent redeployment still showed the old calibration scene without controls. The user explicitly reported this failure of the requested playable delivery. Publish the existing playable engineering preview after source, bridge/claw mechanism, build and browser checks; retain full quantitative physics as a separate visible acceptance result. No physical threshold is changed. The site must show its engineering-preview status, and the deployed URL must complete two attempts. See `docs/validation/engineering-preview-release.md`. This supersedes the earlier publication prerequisites below for the engineering preview only; validated physical release remains incomplete.
+
 ## Engineering deployment authorization — 2026-09-12
 
 The user's later instruction, “修正1後commit and deploy”, authorizes an engineering deployment after the three failed physical criteria are fixed and automated verification passes. Recording calibration, untouched holdout, real-iPhone acceptance and visual inspection remain separate, unverified evidence requirements for a validated release. They no longer block this specifically authorized engineering deployment. Historical execution status below records the earlier review; current evidence is maintained in `docs/validation/final-review-status.md`.

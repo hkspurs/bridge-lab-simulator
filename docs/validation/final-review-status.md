@@ -1,6 +1,8 @@
 # Final review status
 
-## Result
+Current publication decision: see [playable engineering preview release](engineering-preview-release.md). Earlier physical-validation results remain unchanged; operational publication is now tracked separately.
+
+## Previous physical-validation decision
 
 Whole-branch software review is clean at `ccc8c87`; the later physical fixes in `de4cfe1` also passed independent scoped review. Two of the three physical criteria are corrected. Actual-Havok verification now reports **27 passed / 1 failed**: penetration remains **1.681608576 mm > 1 mm**.
 

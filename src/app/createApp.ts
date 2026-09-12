@@ -14,6 +14,11 @@ export function createApp(host: HTMLElement): BridgeLabApp {
 
   const header = document.createElement("header");
   const title = document.createElement("h1"); title.textContent = "BRIDGE LAB";
+  const releaseLabel = document.createElement("small");
+  releaseLabel.className = "release-label";
+  releaseLabel.textContent = "Engineering preview";
+  releaseLabel.title = "Physics accuracy is not yet validated.";
+  title.append(releaseLabel);
   const views = document.createElement("div"); views.className = "view-controls"; views.setAttribute("aria-label", "Camera view");
   const front = document.createElement("button"); front.type = "button"; front.textContent = "Front"; front.dataset.view = "front";
   const side = document.createElement("button"); side.type = "button"; side.textContent = "Side"; side.dataset.view = "side";

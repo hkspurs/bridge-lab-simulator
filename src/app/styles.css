@@ -12,6 +12,7 @@ button:focus-visible, summary:focus-visible { outline: 3px solid #ffbd59; outlin
 }
 header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 38px; }
 h1 { margin: 0; font-size: clamp(1rem, 3.8vw, 1.4rem); letter-spacing: -.02em; }
+.release-label { display: block; color: #ffc66d; font-size: .65rem; font-weight: 500; letter-spacing: 0; }
 .view-controls, .attempt-actions { display: flex; gap: .45rem; }
 .view-controls button, .attempt-actions button { min-height: 42px; padding: .45rem .9rem; border: 1px solid #6b7278; border-radius: 12px; background: #1b232a; font-weight: 700; }
 button:hover:not(:disabled) { background: #28323a; }

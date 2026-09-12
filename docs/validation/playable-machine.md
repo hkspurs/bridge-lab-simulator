@@ -1,5 +1,7 @@
 # Playable bridge-machine validation
 
+Current publication decision: see [playable engineering preview release](engineering-preview-release.md). Earlier physical-validation results remain unchanged; operational publication is now tracked separately.
+
 ## Release status
 
 | Item | Status | Evidence |
@@ -7,7 +9,7 @@
 | Evidence label | **Engineering fixture** | Four independently configured rods use low-confidence estimates; this is not a recording reconstruction. |
 | Playable prototype | **Physical acceptance incomplete** | Two criteria corrected in `de4cfe1`; penetration remains 1.681609 mm > 1 mm. See [physical fixes and experiments](physical-gate-fixes.md). |
 | Validated release | **Blocked** | No verified recording, untouched holdout, or physical-iPhone run is available. |
-| Deployment | **Authorized after physical fixes; blocked by remaining failure** | User explicitly requested “修正1後commit and deploy”. Video/holdout/iPhone gaps do not block this engineering deployment; the unresolved penetration gate does. |
+| Deployment | **Playable engineering preview preparation** | Following the user’s correction that the redeployed baseline still has no controls, publish the playable preview after operational checks. Full precision acceptance remains separately failed; see the current release decision above. |
 
 Whole-branch review covered `ccc8c87`; an independent scoped review covered the retained physical fixes in `de4cfe1`. The profile is `bridge-lab-playable-v1-engineering-fixture`. The historical `bridge-lab-v0.1` two-cylinder fixture remains separate. The playable fixture has four distinct estimated rod entries with mixed cross-sections and orientations; it must not be described as four parallel, flat-topped rubber rods.
 

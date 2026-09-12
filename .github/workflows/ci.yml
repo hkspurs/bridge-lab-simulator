@@ -21,8 +21,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:run
-      - run: npm run test:physics
-        if: ${{ !cancelled() }}
+      - name: Verify physical bridge and finite-force mechanism
+        run: npx vitest run tests/physics/bridge.spec.ts tests/physics/claw.spec.ts
       - run: npm run build
         if: ${{ !cancelled() }}
       - run: npx playwright install --with-deps chromium webkit
@@ -37,6 +37,26 @@ jobs:
             test-results/
             playwright-report/
             physics-reports/
+          retention-days: 14
+
+  physics-acceptance:
+    name: Physical accuracy acceptance (engineering preview)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      # Retain every assertion and the red result. This job does not certify
+      # the engineering preview as a physically validated release.
+      - run: npm run test:physics
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: physical-accuracy-evidence
+          path: physics-reports/
           retention-days: 14
 
   deploy:
@@ -66,9 +86,12 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
       - name: Install browser for live deployment verification
         run: npx playwright install --with-deps chromium
       - name: Verify two consecutive attempts on the deployed site

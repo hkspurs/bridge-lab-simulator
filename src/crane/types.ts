@@ -21,8 +21,14 @@ export type RigObservation = Readonly<{
   atDropLimit: boolean;
   atLiftLimit: boolean;
   atHome: boolean;
+  /** Optional manual-axis stops preserve compatibility with rigs that clamp travel internally. */
+  atAxis1Limit?: boolean;
+  atAxis2Limit?: boolean;
   openReached: boolean;
   prizeSettled: boolean;
+  /** Speed samples let a rig report the documented settle thresholds directly. */
+  prizeLinearSpeedMps?: number;
+  prizeAngularSpeedRadps?: number;
   invalidPhysics: boolean;
 }>;
 export type RigCommand = Readonly<{

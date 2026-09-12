@@ -15,7 +15,7 @@ test("two complete attempts preserve the physical prize across Continue", async 
     await phase(page, "REVIEW", 45_000);
     const samples = await page.evaluate(index => window.acceptanceSnapshots.slice(index), startIndex);
     const phases = samples.map(sample => sample.phase).filter((value, index, all) => value !== all[index - 1]);
-    expect(phases).toEqual(expect.arrayContaining(["MOVE_AXIS_1", "MOVE_AXIS_2", "DROP", "CLOSE", "LIFT", "RETURN", "OPEN", "SETTLE", "REVIEW"]));
+    expect(phases.filter(value => value !== "READY")).toEqual(["MOVE_AXIS_1", "MOVE_AXIS_2", "DROP", "CLOSE", "LIFT", "RETURN", "OPEN", "SETTLE", "REVIEW"]);
     expect(phases.filter(value => value === "DROP")).toHaveLength(1);
     expect(phases).not.toContain("FAULT");
     for (const sample of samples) expect([...Object.values(sample.position), ...Object.values(sample.rotation)] .every(Number.isFinite)).toBe(true);

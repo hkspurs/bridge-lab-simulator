@@ -18,8 +18,8 @@ import { PhysicsClock } from "./PhysicsClock";
 import type { DiagnosticSnapshot } from "../diagnostics/createDiagnostics";
 import { isPlayableProfile } from "./createBridge";
 import { createClaw, type PhysicalClawRig } from "./createClaw";
-import { clawProfile } from "../config/clawProfile";
-import { CraneSequence } from "../crane/CraneSequence";
+import { playableClawProfile } from "../config/playableClawProfile";
+import { CraneSequence, sequenceProfileFromClaw } from "../crane/CraneSequence";
 import type { InputEvent, RigObservation } from "../crane/types";
 import { stepSimulation } from "./stepSimulation";
 
@@ -91,9 +91,9 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Sup
     new HemisphericLight("calibration softbox", new Vector3(0, 1, -0.5), scene);
     const rods = createBridge(scene, profile);
     const prize = createPrize(scene, profile);
-    const rig = isPlayableProfile(profile) ? createClaw(scene, clawProfile) : undefined;
+    const rig = isPlayableProfile(profile) ? createClaw(scene, playableClawProfile) : undefined;
     physicalRig = rig;
-    let sequence = rig ? new CraneSequence() : undefined;
+    let sequence = rig ? new CraneSequence(sequenceProfileFromClaw(playableClawProfile)) : undefined;
     const bodies = [...rods, prize].map((mesh) => mesh.physicsBody!);
     if (rig) bodies.push(...rig.bodies);
     const clock = new PhysicsClock({ stepSeconds, maxFrameSeconds: 0.1, maxStepsPerFrame: 12 });
@@ -210,7 +210,7 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Sup
       }
       if (rig) {
         rig.command({ travel: "stop", claw: "open" });
-        sequence = new CraneSequence();
+        sequence = new CraneSequence(sequenceProfileFromClaw(playableClawProfile));
       }
       paused = false;
     };

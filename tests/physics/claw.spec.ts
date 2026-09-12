@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import type { PhysicsEngine } from "@babylonjs/core/Physics/v2/physicsEngine";
 import HavokPhysics from "@babylonjs/havok";
 import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
@@ -13,6 +14,7 @@ import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
 import { LockConstraint } from "@babylonjs/core/Physics/v2/physicsConstraint";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { beforeAll, afterEach, describe, expect, it } from "vitest";
+import { report } from "./report";
 import { createClaw } from "../../src/physics/createClaw";
 import { clawProfile } from "../../src/config/clawProfile";
 let havok: Awaited<ReturnType<typeof HavokPhysics>>;
@@ -117,7 +119,11 @@ describe("real Havok finite-torque claw", () => {
           count += contacts.length;
         }
       }
-      console.log(JSON.stringify({ width, maxPenetration, maxImpactImpulse, maxForce, minForce, maxTorqueRatio, maxAppliedTorqueNm, maxCommandedTorqueLimitNm, maxSpeed, maxNormalImpulseSumVsResultantDifferenceRatio, angles: rig.actuatorSamples().map(s => s.angleRad), count }));
+      report(`blocked-claw-${width}`, { widthM: width, maximumPenetrationM: maxPenetration, maximumImpactImpulseNs: maxImpactImpulse, maximumImpactImpulseOverStepN: maxImpactImpulse * 120, maximumQuasiStaticForceN: maxForce, minimumQuasiStaticForceN: minForce, maxTorqueRatio, maxAppliedTorqueNm, maxCommandedTorqueLimitNm, maxSpeed, maxNormalImpulseSumVsResultantDifferenceRatio, angles: rig.actuatorSamples().map(s => s.angleRad), count }, {
+        contactPresent: count > 0 && minForce > .5, quasiStaticForceWithin105Percent: maxForce <= clawProfile.peakContactForceN.value * 1.05,
+        torqueCapped: maxTorqueRatio <= 1.001, penetrationWithinOneMm: maxPenetration <= .001,
+        closureBlocked: rig.actuatorSamples().every(sample => sample.angleRad > clawProfile.closedAngleRad.value + .1),
+      }, "Quasi-static interval ticks 481–719 at 120 Hz. Calibrated load-cell lock joint reaction impulse / dt minus cell weight gives external resultant clamp force. Raw normal solver impulses are reported separately; their sum is not grip force. Impact maximum is impulse/dt over entire trial, not a continuous peak-force bound.");
       expect(count).toBeGreaterThan(0);
       expect(minForce).toBeGreaterThan(.5);
       expect(maxForce).toBeLessThanOrEqual(clawProfile.peakContactForceN.value * 1.05);
@@ -255,7 +261,7 @@ describe("real Havok finite-torque claw", () => {
   it("remains stable for twenty obstructed open/close cycles and cleans every claw body and joint", () => {
     const { scene, rig, step, obstacle } = fixture();
     obstacle(.12);
-    const before = scene.getPhysicsEngine()!.getBodies().length;
+    const before = (scene.getPhysicsEngine()! as PhysicsEngine).getBodies().length;
     let maximumPenetrationM = 0;
     let maximumHeadDriftM = 0;
     const headStart = rig.head.transformNode.position.clone();
@@ -274,11 +280,11 @@ describe("real Havok finite-torque claw", () => {
       expect(rig.observe().invalidPhysics).toBe(false);
       expect(rig.observe().openReached).toBe(true);
     }
-    console.log(JSON.stringify({cycles:20, maximumPenetrationM, maximumHeadDriftM}));
+    report("obstructed-open-close-20", { cycles: 20, maximumPenetrationM, maximumHeadDriftM }, { penetrationWithinOneMm: maximumPenetrationM <= .001, jointDriftWithinOneMm: maximumHeadDriftM <= .001 }, "Existing real-Havok obstructed claw endurance and cleanup gate; complete carriage cycles covered separately.");
     expect(maximumPenetrationM).toBeLessThanOrEqual(.001);
     expect(maximumHeadDriftM).toBeLessThanOrEqual(.001);
     rig.dispose();
     rig.dispose();
-    expect(scene.getPhysicsEngine()!.getBodies()).toHaveLength(before - rig.bodies.length);
+    expect((scene.getPhysicsEngine()! as PhysicsEngine).getBodies()).toHaveLength(before - rig.bodies.length);
   });
 });

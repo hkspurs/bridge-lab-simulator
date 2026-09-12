@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import type { PhysicsEngine } from "@babylonjs/core/Physics/v2/physicsEngine";
 import HavokPhysics from "@babylonjs/havok";
 import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
@@ -11,6 +12,7 @@ import { PhysicsMotionType, PhysicsShapeType } from "@babylonjs/core/Physics/v2/
 import { Tags } from "@babylonjs/core/Misc/tags";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { report } from "./report";
 import { playableProfile } from "../../src/config/playableProfile";
 import { createPhysicsScene, type PhysicsSceneHandle } from "../../src/physics/createPhysicsScene";
 
@@ -27,6 +29,8 @@ async function setup(profile = structuredClone(playableProfile)) {
   const handle = await createPhysicsScene({} as HTMLCanvasElement, profile, {
     createEngine: () => new NullEngine(), initializeHavok: async () => havok,
   });
+  handle.engine.stopRenderLoop();
+  handle.rig?.dispose(); // Passive bridge fixture has only prize and four rods.
   handles.push(handle);
   return handle;
 }
@@ -83,7 +87,7 @@ describe("four-rod engineering fixture in real Havok", () => {
 
   it("collides with a falling probe at both circular-rail endpoints", async () => {
     const { scene, rods, prize } = await setup();
-    const plugin = scene.getPhysicsEngine()!.getPhysicsPlugin()!;
+    const plugin = (scene.getPhysicsEngine()! as PhysicsEngine).getPhysicsPlugin();
     const bodies = [...rods, prize].map((mesh) => mesh.physicsBody!);
     prize.physicsBody!.shape!.filterCollideMask = 0;
     for (const endpoint of [-1, 1]) {
@@ -102,7 +106,7 @@ describe("four-rod engineering fixture in real Havok", () => {
 
   it("collides with a falling probe over each reachable end rail", async () => {
     const { scene, rods, prize } = await setup();
-    const plugin = scene.getPhysicsEngine()!.getPhysicsPlugin()!;
+    const plugin = (scene.getPhysicsEngine()! as PhysicsEngine).getPhysicsPlugin();
     const bodies = [...rods, prize].map((mesh) => mesh.physicsBody!);
     prize.physicsBody!.shape!.filterCollideMask = 0;
     for (const rod of rods.slice(2)) {
@@ -125,7 +129,7 @@ describe("four-rod engineering fixture in real Havok", () => {
       profile.bridge.rods[0].lengthM.value = length;
       profile.bridge.rods[1].lengthM.value = length;
       const { scene, rods, prize } = await setup(profile);
-      const plugin = scene.getPhysicsEngine()!.getPhysicsPlugin()!;
+      const plugin = (scene.getPhysicsEngine()! as PhysicsEngine).getPhysicsPlugin();
       const bodies = [...rods, prize].map((mesh) => mesh.physicsBody!);
       for (let tick = 0; tick < 120 * 2; tick++) plugin.executeStep(1 / 120, bodies);
       expect(prize.position.y < 0).toBe(length === 0.3);
@@ -145,12 +149,36 @@ describe("four-rod engineering fixture in real Havok", () => {
 
   it("keeps the prize supported with under one millimetre drift for ten seconds", async () => {
     const { scene, rods, prize } = await setup();
-    const plugin = scene.getPhysicsEngine()!.getPhysicsPlugin()!;
+    const plugin = (scene.getPhysicsEngine()! as PhysicsEngine).getPhysicsPlugin();
     const bodies = [...rods, prize].map((mesh) => mesh.physicsBody!);
     for (let tick = 0; tick < 120 * 10; tick++) plugin.executeStep(1 / 120, bodies);
-    const settled = prize.position.y;
-    for (let tick = 0; tick < 120 * 10; tick++) plugin.executeStep(1 / 120, bodies);
-    const drift = Math.abs(prize.position.y - settled);
+    const settled = prize.position.clone();
+    const body = prize.physicsBody!;
+    const properties = body.getMassProperties();
+    const energy = () => {
+      const localCom = properties.centerOfMass!.rotateByQuaternionToRef(prize.rotationQuaternion!, new Vector3());
+      const principalRotation = prize.rotationQuaternion!.multiply(properties.inertiaOrientation!);
+      const omega = body.getAngularVelocity().rotateByQuaternionToRef(principalRotation.conjugate(), new Vector3());
+      const inertia = properties.inertia!;
+      return properties.mass! * (9.80665 * (prize.position.y + localCom.y) + body.getLinearVelocity().lengthSquared() / 2 +
+        (inertia.x * omega.x ** 2 + inertia.y * omega.y ** 2 + inertia.z * omega.z ** 2) / 2);
+    };
+    const initialEnergyJ = energy();
+    let drift = 0, maximumLinearSpeedMps = 0, maximumAngularSpeedRadps = 0, maximumEnergyIncreaseJ = 0;
+    for (let tick = 0; tick < 120 * 10; tick++) {
+      plugin.executeStep(1 / 120, bodies);
+      drift = Math.max(drift, prize.position.subtract(settled).length());
+      maximumLinearSpeedMps = Math.max(maximumLinearSpeedMps, body.getLinearVelocity().length());
+      maximumAngularSpeedRadps = Math.max(maximumAngularSpeedRadps, body.getAngularVelocity().length());
+      maximumEnergyIncreaseJ = Math.max(maximumEnergyIncreaseJ, energy() - initialEnergyJ);
+    }
+    report("static-support", { settlingSeconds: 10, measuredSeconds: 10, maximumDriftM: drift, maximumLinearSpeedMps, maximumAngularSpeedRadps, maximumEnergyIncreaseJ }, {
+      driftWithinOneMm: drift <= .001, noSustainedJitter: maximumLinearSpeedMps <= .005 && maximumAngularSpeedRadps <= .05,
+      noIncreasingEnergy: maximumEnergyIncreaseJ <= 1e-6,
+    }, "Passive prize plus four static rods. 120 Hz samples over entire 10 s interval; 3D drift from settled pose. Energy includes world COM gravitational potential and principal-axis rotational/translational kinetic energy. Numerical energy allowance 1 microjoule.");
     expect(drift).toBeLessThanOrEqual(0.001);
+    expect(maximumLinearSpeedMps).toBeLessThanOrEqual(.005);
+    expect(maximumAngularSpeedRadps).toBeLessThanOrEqual(.05);
+    expect(maximumEnergyIncreaseJ).toBeLessThanOrEqual(1e-6);
   });
 });

@@ -10,7 +10,7 @@ import "@babylonjs/core/Physics/v2/physicsEngineComponent";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Scene } from "@babylonjs/core/scene";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import type { CalibrationProfile } from "../config/types";
+import type { SupportedCalibrationProfile } from "../config/types";
 import { validateProfile } from "../config/validateProfile";
 import { createBridge } from "./createBridge";
 import { createPrize } from "./createPrize";
@@ -35,7 +35,7 @@ export interface PhysicsSceneOptions {
   initializeHavok?: () => ReturnType<typeof HavokPhysics>;
 }
 
-export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: CalibrationProfile, options: PhysicsSceneOptions = {}): Promise<PhysicsSceneHandle> {
+export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: SupportedCalibrationProfile, options: PhysicsSceneOptions = {}): Promise<PhysicsSceneHandle> {
   const issues = validateProfile(profile);
   if (issues.length) throw new Error(`Invalid calibration profile: ${issues.map((issue) => `${issue.path}: ${issue.message}`).join("; ")}`);
   const stepSeconds = 1 / 120;

@@ -11,7 +11,8 @@
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:physics": "vitest run tests/physics"
   },
   "dependencies": {
     "@babylonjs/core": "^8.38.1",

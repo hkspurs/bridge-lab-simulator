@@ -6,7 +6,7 @@
 
 Verification below used local implementation commit `70dd588004126fd053dd40f10ded5c3f9224b042`, a clean working tree, Babylon **8.56.2**, Havok **1.3.14**, Node **v24.19.0**, gravity **9.80665 m/s²**, and fixed step **1/120 s**. The four-rod profile is `bridge-lab-playable-v1-engineering-fixture`; the playable claw is `claw-playable-v1-engineering-fixture`. The original `claw-v1-engineering-fixture` remains the isolated mechanism regression fixture.
 
-Local browsers were unavailable. A preceding remote CI run passed all ten Chromium/WebKit cases before the playable drop-height correction; that pass is evidence for the intermediate tree, not a pass for the final implementation. A subsequent remote CI run returned 9/10 browser passes with a WebKit input-readiness race; the correction and scoped verification are recorded below. Fresh CI for that correction remains a root-agent next step. Footage and physical iPhone evidence remain unavailable; this is neither a playable-prototype acceptance pass nor a validated release.
+Local browsers were unavailable. A preceding remote CI run passed all ten Chromium/WebKit cases before the playable drop-height correction; that pass is evidence for the intermediate tree, not a pass for the final implementation. A subsequent remote CI run returned 9/10 browser passes with a WebKit input-readiness race; the correction and scoped verification are recorded below. Final exact-tree CI passed all 10 browser cases after that correction; the two unchanged physical gates still failed. Footage and physical iPhone evidence remain unavailable; this is neither a playable-prototype acceptance pass nor a validated release.
 
 ## Committed work
 
@@ -135,6 +135,10 @@ The harness dispatches **synthetic touch PointerEvents** and emulates capture bo
 
 Both Chromium and WebKit use 844×390 touch-capable landscape contexts, device scale factor 3, and 120-second test timeouts. The framing case saves successful `landscape-front.png`, `landscape-side.png`, and `portrait.png` images. Every test retains a trace; snapshot JSON is attached on success and on in-page failures.
 
+### Final exact-tree CI evidence
+
+[Run 34680490442](https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34680490442) tested remote `882e7c29`, whose tree exactly matches local `336e28c`. Lint, typecheck and build passed; 133 source tests passed; physics reported 23 passed and the same 2 failures (sliding error 6.069007482201361%, penetration 0.001681608575842708 m); all 10 Chromium/WebKit browser cases passed in approximately one minute. Deploy was skipped. The [verify job](https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34680490442/job/103518123189) retained artifact `10294067864`, `acceptance-evidence` (40.98 MB), through 2026-09-26. No physical-iPhone coverage is inferred. Screenshot files were produced, but no human visual inspection is claimed because the prior artifact retrieval attempt returned 403.
+
 ### Existing remote browser evidence
 
 The root agent reported a successful intermediate CI run for remote commit `ac1c02c6` (tree matching local `0652422`): 152 source-plus-existing tests, 19 existing physical tests, and **10/10 browser tests passed**; deploy was skipped.
@@ -143,12 +147,12 @@ The root agent reported a successful intermediate CI run for remote commit `ac1c
 - Verify job: https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34679218266/job/103514567653
 - Artifact ID: `10293336237`, `acceptance-evidence`, approximately 43 MB.
 
-The connector returned an artifact download URL, but workspace retrieval returned 403. Consequently no actual screenshot inspection is claimed here. The successful framing test and retained artifact are evidence that screenshots were produced. The final implementation, including its changed drop geometry and ordered phase assertion, needs a fresh remote CI run.
+The connector returned an artifact download URL, but workspace retrieval returned 403. Consequently no actual screenshot inspection is claimed here. The successful framing test and retained artifact are evidence that screenshots were produced. This intermediate evidence is superseded for browser pass status by the final exact-tree run above.
 
 ## Root next steps
 
-1. Save the final implementation/report commit through the authorized remote workflow and run PR CI. Expect the unchanged physical assertions to keep verification red unless the measured residuals are resolved. Confirm browser execution still completes after the physical failure and inspect its retained snapshots/traces.
-2. Retrieve and inspect successful front/side/portrait screenshots when artifact access permits. Record the final remote commit, run, job and artifact IDs separately from the intermediate pass.
+1. Inspect the final CI run’s retained snapshots/traces when artifact access permits; browser execution completed after the physical failures.
+2. Retrieve and inspect the successful front/side/portrait screenshots when artifact access permits; do not infer visual quality from file generation.
 3. Keep release status at engineering fixture. Diagnose prize/rod contact penetration and rod sliding accuracy with physical evidence; preserve the 1 mm and 5% gates. The bounded smaller-gap experiment did not resolve penetration.
 4. Task 8 must state the footage/holdout and physical-iPhone gates as blocked or pending, with no invented measurements. No deployment or validated-release claim is authorized by these results.
 

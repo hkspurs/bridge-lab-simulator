@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "status": "NOT_RUN",
+  "device": { "model": null, "hardwareIdentifier": null, "iosVersion": null, "safariVersion": null },
+  "build": { "commit": null, "profileId": null, "profileSha256": null, "url": null },
+  "run": { "startedUtc": null, "durationMinutes": null, "orientation": "landscape", "tester": null },
+  "interactionChecks": {
+    "axis1HoldRelease": null,
+    "axis2HoldRelease": null,
+    "slideOut": null,
+    "secondFinger": null,
+    "longPress": null,
+    "rotation": null,
+    "appSwitchResumeAxis1": null,
+    "appSwitchResumeAxis2": null,
+    "appSwitchResumeAutomaticMotion": null,
+    "tenMinuteRepeatedAttempts": null
+  },
+  "performance": {
+    "frameTimeSampleCount": null,
+    "frameTimeMillisecondsP50": null,
+    "frameTimeMillisecondsP95": null,
+    "frameTimeMillisecondsP99": null,
+    "sustainedBelow30Fps": null,
+    "droppedSimulationTimeSeconds": null,
+    "visibleJitter": null,
+    "warmDeviceBehavior": null
+  },
+  "result": "BLOCKED",
+  "notes": "No physical iPhone was available at creation. WebKit automation cannot populate this record."
+}

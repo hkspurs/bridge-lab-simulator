@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "status": "NOT_RUN",
+  "source": {
+    "filename": "ScreenRecording_09-11-2026 22-47-23_1.mp4",
+    "verifiedSha256": null,
+    "byteLength": null,
+    "retrievalProvenance": null
+  },
+  "reservation": {
+    "reservedBeforeFittingUtc": null,
+    "intervalStartSeconds": null,
+    "intervalEndSeconds": null,
+    "completeAttempt": null,
+    "reasonUntouched": null,
+    "inspectedForFitting": null
+  },
+  "frozenCandidate": {
+    "commit": null,
+    "profileId": null,
+    "calibrationVersion": null,
+    "profileSha256": null
+  },
+  "singleRun": {
+    "runUtc": null,
+    "observedOutcome": null,
+    "simulatedOutcome": null,
+    "translationDirectionMatches": null,
+    "rotationDirectionMatches": null,
+    "projectedCenterErrorPercentBoxHeight": null,
+    "orientationErrorDegrees": null,
+    "eventTimingErrorSeconds": null,
+    "cameraMotionAndAnnotationUncertainty": null,
+    "result": "BLOCKED"
+  },
+  "notes": "No suitable untouched complete attempt was available at creation. Populate only from inspected, checksum-verified footage; never retune on this interval."
+}

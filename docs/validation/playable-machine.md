@@ -1,8 +1,38 @@
 # Playable bridge-machine validation
 
-- Execution base commit: `20610a4c956d611249ae7820d4a72fee1f8b63e8`
-- Evidence label: engineering fixture
-- Source-recording gate: blocked because the named recording was unavailable; bytes, checksum, and frames were not inspected.
-- Validated-release status: not met.
+## Release status
 
-Task 1 introduced a discriminated four-rod profile while retaining `bridge-lab-v0.1` as the historical two-cylinder calibration. Config tests and TypeScript typecheck passed on 2026-09-12.
+| Item | Status | Evidence |
+|---|---|---|
+| Evidence label | **Engineering fixture** | Four independently configured rods use low-confidence estimates; this is not a recording reconstruction. |
+| Playable prototype | **Failed** | Two unchanged physical gates fail. See [Task 7 report](task-7-report.md). |
+| Validated release | **Blocked** | No verified recording, untouched holdout, or physical-iPhone run is available. |
+| Deployment | **Not authorized** | Task 9 requires all failed and blocked gates to pass for one exact commit and profile. |
+
+The reviewed implementation is local commit `336e28c`, profile `bridge-lab-playable-v1-engineering-fixture`. The historical `bridge-lab-v0.1` two-cylinder fixture remains separate. The playable fixture has four distinct estimated rod entries with mixed cross-sections and orientations; it must not be described as four parallel, flat-topped rubber rods.
+
+## Evidence matrix
+
+| Gate | Result | Evidence or missing input |
+|---|---|---|
+| Source recording and annotations | **Blocked / NOT RUN** | `ScreenRecording_09-11-2026 22-47-23_1.mp4` was unavailable. Its recorded baseline digest `052bb609404b0f395aead7c5c00d180cc75a0e7ad742f82d2edf967cf79db6db` is unverified; no bytes or frames were inspected. See [four-rod ledger](../research/four-rod-annotations.md). |
+| Finite-torque claw | **Passed for engineering fixture** | Actual-engine obstruction, torque, quasi-static force, slip, and endurance evidence: [claw feasibility](claw-feasibility.md) and [Task 7 report](task-7-report.md). |
+| Automated controls and cycles | **Passed on exact tree** | Intermediate [run 34679218266](https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34679218266) passed 10/10 browser cases for remote `ac1c02c6` / local tree `0652422`. Later [run 34679711714](https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34679711714) passed 9/10 for remote `cde762ad` / local tree `70dd588`, exposing a WebKit synthetic-input readiness race. Commit `336e28c` has the reviewed correction; [run 34680490442](https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34680490442) for remote `882e7c29`, exact local tree `336e28c`, passed 10/10 Chromium/WebKit cases. Its verify job is [103518123189](https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34680490442/job/103518123189); artifact `10294067864` (`acceptance-evidence`, 40.98 MB) expires 2026-09-26. Physics remained red at the same two gates; deploy was skipped. |
+| Screenshot inspection | **Blocked / NOT RUN** | Artifact retrieval returned 403. Screenshot production is recorded, but no human visual inspection is claimed. |
+| Rod sliding ≤5% error | **Failed** | Measured error **6.069%**; tolerance unchanged. |
+| Contact penetration ≤1 mm | **Failed** | Measured maximum **1.682 mm**; tolerance unchanged. |
+| Other Task 7 physics gates | **Passed** | Canonical metrics and all-joint endurance evidence are in [Task 7 report](task-7-report.md). The shared penetration assertion keeps the suite red. |
+| V2/V3 comparison | **Blocked / NOT RUN** | No frames or measured landing inputs were available; no fitting occurred. |
+| Untouched holdout | **Blocked / NOT RUN** | No suitable complete untouched attempt was available. Use `tests/fixtures/calibration/holdout-reservation.v1.json` before future tuning. |
+| Physical iPhone Safari | **Blocked / NOT RUN** | No physical iPhone was available. WebKit automation is not a substitute. Use `tests/fixtures/device/iphone-safari-acceptance.v1.json`. |
+| Device performance | **Blocked / NOT RUN** | Requires the physical-device run. Target 60 FPS; sustained below 30 FPS fails. Physics remains `9.80665 m/s²` at `1/120 s`. |
+
+## Pre-registered footage protocol
+
+Calibrate in this order: geometry → mass/COM → contact friction → joint geometry/path → force curve → restitution/damping. V2 and V3 must share one parameter set and differ only in measured landing input. Record a material initial-state difference instead of claiming a controlled comparison.
+
+The proposed engineering tolerances remain: projected center error ≤5% of visible box height; orientation error ≤5° where projection permits measurement; event timing error ≤0.10 s on continuous footage. Record camera motion and annotation uncertainty. Unobservable quantities remain untested. V2 must reproduce failure; V3 must reproduce the observed rotation direction and diagonal pose.
+
+Before fitting, reserve an independent complete attempt with the holdout fixture, including its verified source checksum and interval. After calibration, freeze the profile and run the holdout once. Do not retune on it. A failure requires a new calibration version and another untouched holdout while retaining the failed record.
+
+Resolve both physical failures without widening tolerances, verify the recording, complete V2/V3 and holdout validation, and run physical iPhone acceptance. All release evidence must identify the same proposed commit and profile before Task 9 review or deployment.

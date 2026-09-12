@@ -257,6 +257,15 @@ expect(sequence.phase).toBe('MOVE_AXIS_2');
 - [ ] If no physical iPhone or suitable holdout is available, explicitly mark the relevant acceptance blocked. WebKit emulation is not a substitute for the physical-device check.
 - [ ] Commit `docs: record calibration and iPhone acceptance evidence` with actual measurements and remaining limitations.
 
+## Recorded progress (2026-09-12)
+
+| Task | Status | Basis |
+|---|---|---|
+| 1–6 | **Implemented and review complete** | Four-rod schema/geometry, finite-torque claw, sequence, fixed-step integration, and interface are committed. Recording-derived geometry remains blocked and estimated. |
+| 7 | **Implementation complete; acceptance failed** | Review is clean at `336e28c`. All-joint endurance passes, but rod sliding is 6.069% against a 5% limit and penetration is 1.682 mm against a 1 mm limit. Exact-tree CI run 34680490442 passed lint, typecheck, build, 133 source tests and 10/10 browser cases; physics remained 23 pass / 2 fail and deploy was skipped. |
+| 8 | **Feasible documentation complete; external tests blocked** | Recording, untouched holdout and physical iPhone were unavailable. No calibration or device measurement was run. Reservation and device-record fixtures are present for future evidence. |
+| 9 | **Not started / blocked** | No merge or deployment while physical, footage, holdout and device gates remain failed or blocked. |
+
 ## Task 9: Review and deploy the accepted version
 
 - [ ] Review the implementation against the user's seven review findings and every matrix row. Keep full-product replay/art/audio milestones listed separately so this release is not mistaken for the entire original specification.

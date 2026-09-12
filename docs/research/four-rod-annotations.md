@@ -21,3 +21,21 @@ The fixture defines rod-local Z as the longitudinal axis, local X as cross-secti
 ## Missing evidence to collect
 
 For each rod, a future annotation must record the source filename and verified SHA-256, timestamp and frame, visible endpoint image coordinates, occluded endpoint status, visible contacts, inferred role, scale reference and limitations, and confidence. Only after those fields are supported by inspected frames may fixture values be promoted from engineering estimates.
+
+## Annotation record template
+
+Create one record per visible observation. Do not copy the unverified baseline digest into a verified-checksum field. Use `null` for unavailable fields rather than inferring values from the engineering fixture.
+
+| Field | Required record |
+|---|---|
+| Record identity | Version, author and UTC creation time |
+| Source | Exact filename, verified SHA-256, byte length and retrieval provenance |
+| Frame | Continuous timestamp, frame index if trustworthy, and camera-motion/cut effect |
+| Feature | `rod-1`…`rod-4`, claw part, prize feature or contact event |
+| Image observation | Endpoint/center pixels, image dimensions, occlusion and visible contact cues |
+| Scale and orientation | Reference and uncertainty; projection convention and angle; otherwise `null` |
+| Event | Start/end definition, timestamp uncertainty and footage continuity |
+| Classification | Direct observation, derived measurement or engineering estimate |
+| Limitations | Perspective, motion, blur, obstruction and competing interpretations |
+
+Complete `tests/fixtures/calibration/holdout-reservation.v1.json` before inspecting any reserved frames for fitting. A reserved interval remains labelled as holdout evidence even after a failed run.

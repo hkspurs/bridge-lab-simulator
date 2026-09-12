@@ -218,6 +218,43 @@ describe("real Havok finite-torque claw", () => {
     step(30);
     expect(carriage.transformNode.position.subtract(stoppedAt).length()).toBeLessThan(1e-8);
   });
+  it("locks axis 1 when axis 2 starts without an intervening stop tick", () => {
+    const { rig, step } = fixture();
+    const carriage = rig.bodies[0];
+    rig.command({ travel: "axis1", claw: "open" });
+    step(60);
+    const releasedAt = carriage.transformNode.position.x;
+    rig.command({ travel: "axis2", claw: "hold" });
+    step(30);
+    expect(carriage.transformNode.position.x).toBeCloseTo(releasedAt, 8);
+    expect(carriage.getLinearVelocity().x).toBeCloseTo(0, 8);
+    expect(carriage.transformNode.position.z).toBeGreaterThan(0);
+  });
+  it("locks axis 2 when its release immediately starts DROP", () => {
+    const { rig, step } = fixture();
+    const carriage = rig.bodies[0];
+    rig.command({ travel: "axis2", claw: "open" });
+    step(60);
+    const releasedAt = carriage.transformNode.position.z;
+    rig.command({ travel: "down", claw: "hold" });
+    step(30);
+    expect(carriage.transformNode.position.z).toBeCloseTo(releasedAt, 8);
+    expect(carriage.getLinearVelocity().z).toBeCloseTo(0, 8);
+    expect(carriage.transformNode.position.y).toBeLessThan(clawProfile.homeHeightM.value);
+  });
+  it("latches an explicit open target before a following hold", () => {
+    const { rig, step } = fixture();
+    rig.command({ travel: "stop", claw: "close" });
+    step(120);
+    expect(rig.actuatorSamples().every(sample => sample.targetAngleRad === clawProfile.closedAngleRad.value)).toBe(true);
+    rig.command({ travel: "stop", claw: "open" });
+    rig.command({ travel: "stop", claw: "hold" });
+    step(120);
+    for (const sample of rig.actuatorSamples()) {
+      expect(sample.targetAngleRad).toBe(clawProfile.openAngleRad.value);
+      expect(sample.targetSpeedRadps).toBeGreaterThan(0);
+    }
+  });
   it("holds the last claw target while travelling", () => {
     const { rig, step } = fixture();
     rig.command({ travel: "axis1", claw: "hold" });

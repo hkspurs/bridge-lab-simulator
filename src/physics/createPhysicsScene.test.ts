@@ -125,6 +125,27 @@ describe("Havok calibration scene", () => {
     expect(handle.prize.position.subtract(initialPrize).length()).toBeLessThan(.01);
     expect(handle.prize.physicsBody!.getLinearVelocity().length()).toBeLessThan(.5);
   });
+  it("keeps the actuator open through READY after New setup during CLOSE", async () => {
+    const handle = await setup(structuredClone(playableProfile));
+    vi.spyOn(handle.engine, "getDeltaTime").mockReturnValue(1000 / 60);
+    const frame = handle.engine.activeRenderLoops[0];
+    handle.dispatch({ type: "press", axis: 1 });
+    handle.dispatch({ type: "release", axis: 1 });
+    handle.dispatch({ type: "press", axis: 2 });
+    handle.dispatch({ type: "release", axis: 2 });
+    handle.sequence!.tick(0, { ...handle.rig!.observe(), atDropLimit: true });
+    expect(handle.sequence!.phase).toBe("CLOSE");
+    for (let i = 0; i < 60; i++) frame();
+    expect(handle.rig!.actuatorSamples().every(sample => sample.targetAngleRad < 0)).toBe(true);
+
+    handle.newSetup();
+    expect(handle.sequence!.phase).toBe("READY");
+    for (let i = 0; i < 60; i++) frame();
+    for (const sample of handle.rig!.actuatorSamples()) {
+      expect(sample.targetAngleRad).toBeGreaterThan(0);
+      expect(sample.angleRad).toBeGreaterThan(0.6);
+    }
+  });
   it("builds exactly two dimensioned cylindrical static rods and a dynamic prize", async () => {
     const profile = structuredClone(baselineProfile);
     profile.bridge.rodHeightDeltaM.value = 0.01;

@@ -36,3 +36,17 @@ The proposed engineering tolerances remain: projected center error ≤5% of visi
 Before fitting, reserve an independent complete attempt with the holdout fixture, including its verified source checksum and interval. After calibration, freeze the profile and run the holdout once. Do not retune on it. A failure requires a new calibration version and another untouched holdout while retaining the failed record.
 
 Resolve both physical failures without widening tolerances, verify the recording, complete V2/V3 and holdout validation, and run physical iPhone acceptance. All release evidence must identify the same proposed commit and profile before Task 9 review or deployment.
+
+## Final-review fix wave: latest local physical evidence
+
+The final-review control fixes change the 20-cycle trajectory by locking each
+released manual carriage axis in the first subsequent fixed tick. A fresh local
+actual-Havok matrix therefore supersedes the earlier physical behavior only for
+this working tree; the historical exact-tree CI results above remain unchanged.
+It reports 26 passing and two failing tests. Rod sliding remains
+**6.069007% > 5%**, and maximum penetration remains
+**1.681609 mm > 1 mm**. The sustained-cycle test now also reports a maximum
+locked arm-axis rotation error of **0.020459 rad > 0.02 rad** while all 20
+cycles reach REVIEW with finite state, stable body identity/count, and bounded
+residual motion. No tolerance was changed. Fresh CI for the final-fix commit is
+pending.

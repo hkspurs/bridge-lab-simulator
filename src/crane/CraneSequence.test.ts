@@ -94,6 +94,22 @@ describe("CraneSequence", () => {
     expect(sequence.phase).toBe("READY");
   });
 
+  it("starts each first manual travel with a fresh timeout after READY idle", () => {
+    const sequence = new CraneSequence(profile);
+    tick(sequence, profile.travel.axis1.timeoutSeconds * 2);
+    sequence.dispatch({ type: "press", axis: 1 });
+    tick(sequence, 1 / 120);
+    expect(sequence.phase).toBe("MOVE_AXIS_1");
+
+    tick(sequence, profile.travel.axis1.timeoutSeconds);
+    expect(sequence.phase).toBe("FAULT");
+    sequence.dispatch({ type: "continue" });
+    tick(sequence, profile.travel.axis1.timeoutSeconds * 2);
+    sequence.dispatch({ type: "press", axis: 1 });
+    tick(sequence, 1 / 120);
+    expect(sequence.phase).toBe("MOVE_AXIS_1");
+  });
+
   it("latches invalid physics and marks a settle timeout as still moving", () => {
     const sequence = new CraneSequence(profile);
     tick(sequence, 0, observation({ invalidPhysics: true }));

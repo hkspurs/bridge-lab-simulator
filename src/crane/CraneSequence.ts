@@ -144,7 +144,7 @@ export class CraneSequence {
     }
     if (event.type !== "press" && event.type !== "release") return;
     if (this.#phase === "READY" && event.type === "press" && event.axis === 1) {
-      this.#phase = "MOVE_AXIS_1";
+      this.transition("MOVE_AXIS_1");
       this.#heldAxis = 1;
       return;
     }

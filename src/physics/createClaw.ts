@@ -178,9 +178,16 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
       target.z = approach(-position.z);
       target.y = approach(v("homeHeightM") - position.y);
     }
-    // A released/cancelled manual drive is a locked carriage axis. Clear the
-    // animated body's retained velocity in this tick so resume cannot drift.
+    // Non-driven animated carriage axes lock immediately. Acceleration bounds
+    // apply to powered travel; completed manual axes must not coast while a
+    // different axis or the automatic vertical cycle starts.
     if (command.travel === "stop") current.setAll(0);
+    if (command.travel === "axis1") { current.y = 0; current.z = 0; }
+    if (command.travel === "axis2") { current.x = 0; current.y = 0; }
+    if (command.travel === "down" || command.travel === "up") {
+      current.x = 0;
+      current.z = 0;
+    }
     if (target.length() > speed)
       target.normalize().scaleInPlace(speed);
     const delta = target.subtract(current);
@@ -202,7 +209,13 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
   };
   return {
     bodies, head, arms, joints,
-    command(value) { command = Object.freeze({ ...value }); },
+    command(value) {
+      command = Object.freeze({ ...value });
+      // Explicit actuator intents latch synchronously so a reset-open followed
+      // by READY hold cannot retain the preceding attempt's closed target.
+      if (value.claw === "open") targetClawAngle = v("openAngleRad");
+      if (value.claw === "close") targetClawAngle = v("closedAngleRad");
+    },
     beforeStep,
     actuatorSamples: () => Object.freeze(samples.map(sample => Object.freeze({
       ...sample, angleRad: angle(sample.armIndex),

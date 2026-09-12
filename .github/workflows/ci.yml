@@ -69,3 +69,17 @@ jobs:
           path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Install browser for live deployment verification
+        run: npx playwright install --with-deps chromium
+      - name: Verify two consecutive attempts on the deployed site
+        run: npm run test:browser -- --project=chromium-touch-landscape --grep "two complete attempts"
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ steps.deployment.outputs.page_url }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-smoke-evidence
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14

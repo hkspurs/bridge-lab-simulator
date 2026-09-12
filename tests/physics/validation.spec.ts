@@ -136,17 +136,36 @@ describe("real Havok quantitative acceptance matrix", () => {
     for (let tick = 0; tick < 600; tick++) handle.tick();
     body.setLinearVelocity(new Vector3(0, 0, .1));
     const velocities: number[] = [];
-    const slidingContacts: { tick: number; point: number[]; normal: number[]; impulseNs: number; other: string }[] = [];
+    const verticalVelocities: number[] = [];
+    const slidingContacts: { tick: number; point: number[]; normal: number[]; impulseNs: number; other: string; tangentAlignmentZ: number }[] = [];
     let sampleTick = 0;
     body.setCollisionCallbackEnabled(true);
-    body.getCollisionObservable().add(event => slidingContacts.push({ tick: sampleTick, point: event.point?.asArray() ?? [], normal: event.normal?.asArray() ?? [], impulseNs: event.impulse, other: event.collidedAgainst.transformNode.name }));
+    body.getCollisionObservable().add(event => {
+      const com = body.getMassProperties().centerOfMass!.rotateByQuaternionToRef(handle.prize.rotationQuaternion!, new Vector3()).addInPlace(handle.prize.position);
+      const contactVelocity = Vector3.Cross(body.getAngularVelocity(), event.point!.subtract(com)).addInPlace(body.getLinearVelocity());
+      const tangent = contactVelocity.subtract(event.normal!.scale(Vector3.Dot(contactVelocity, event.normal!)));
+      slidingContacts.push({ tick: sampleTick, point: event.point?.asArray() ?? [], normal: event.normal?.asArray() ?? [], impulseNs: event.impulse, other: event.collidedAgainst.transformNode.name, tangentAlignmentZ: tangent.z / tangent.length() });
+    });
     // Deceleration test begins already sliding, over 3 fixed ticks before stop.
-    for (let tick = 0; tick < 3; tick++) { sampleTick = tick; handle.tick(); velocities.push(body.getLinearVelocity().z); }
-    const expectedAcceleration = -profile.contacts.boxRodDynamicFriction.value * gravity;
+    for (let tick = 0; tick < 3; tick++) { sampleTick = tick; handle.tick(); velocities.push(body.getLinearVelocity().z); verticalVelocities.push(body.getLinearVelocity().y); }
+    const verticalAcceleration = (verticalVelocities[2] - verticalVelocities[0]) / (2 * dt);
+    const gravityOnlyExpectedAcceleration = -profile.contacts.boxRodDynamicFriction.value * gravity;
+    // Independent vertical momentum balance, N/m = g + dv_y/dt, not contact
+    // impulse fitting. The settled body develops a small vertical transient.
+    const expectedAcceleration = -profile.contacts.boxRodDynamicFriction.value * (gravity + verticalAcceleration);
     const acceleration = (velocities[2] - velocities[0]) / (2 * dt);
     const error = Math.abs(acceleration / expectedAcceleration - 1);
-    report("rod-sliding", { slidingContacts, rotationAfter: handle.prize.rotationQuaternion!.asArray(), angularVelocityAfter: body.getAngularVelocity().asArray(), intervalSeconds: [dt, 3 * dt], initialSpeedMps: .1, velocitiesMps: velocities, expectedAccelerationMps2: expectedAcceleration, accelerationMps2: acceleration, relativeError: error, fixturePrizeWidthM: .17, fixtureRodLengthM: .6 }, { accelerationWithinFivePercent: error <= .05, stillSliding: velocities[2] > 0 }, "Widened prize within sourced range reaches both circular crowns, giving vertical normals; actual prize mass blocks, inertia and rod colliders. Horizontal coast-down at configured maximum carriage speed; interval ends before kinetic friction switches to static.");
+    const gravityOnlyRelativeError = Math.abs(acceleration / gravityOnlyExpectedAcceleration - 1);
+    const maximumNormalDeviation = Math.max(...slidingContacts.map(contact => Math.hypot(contact.normal[0], contact.normal[2])));
+    const minimumTangentAlignmentZ = Math.min(...slidingContacts.map(contact => contact.tangentAlignmentZ));
+    const normalImpulseNs = slidingContacts.filter(contact => contact.tick > 0).reduce((sum, contact) => sum + contact.impulseNs * Math.abs(contact.normal[1]), 0);
+    const independentNormalImpulseNs = body.getMassProperties().mass! * (gravity + verticalAcceleration) * 2 * dt;
+    const normalMomentumRelativeError = Math.abs(normalImpulseNs / independentNormalImpulseNs - 1);
+    const zeroLinearDamping = body.getLinearDamping() === 0;
+    report("rod-sliding", { verticalVelocitiesMps: verticalVelocities, verticalAccelerationMps2: verticalAcceleration, gravityOnlyExpectedAccelerationMps2: gravityOnlyExpectedAcceleration, gravityOnlyRelativeError, maximumNormalDeviation, minimumTangentAlignmentZ, normalImpulseNs, independentNormalImpulseNs, normalMomentumRelativeError, linearDampingPerSecond: body.getLinearDamping(), slidingContacts, rotationAfter: handle.prize.rotationQuaternion!.asArray(), angularVelocityAfter: body.getAngularVelocity().asArray(), intervalSeconds: [dt, 3 * dt], initialSpeedMps: .1, velocitiesMps: velocities, expectedAccelerationMps2: expectedAcceleration, accelerationMps2: acceleration, relativeError: error, fixturePrizeWidthM: .17, fixtureRodLengthM: .6 }, { accelerationWithinFivePercent: error <= .05, stillSliding: velocities[2] > 0, verticalNormals: maximumNormalDeviation <= .001, frictionAlongTravel: minimumTangentAlignmentZ >= .99, noLinearDamping: zeroLinearDamping, normalMomentumWithinOnePercent: normalMomentumRelativeError <= .01 }, "Widened prize within sourced range reaches both circular crowns; actual prize mass blocks, inertia and rod colliders. Exact original three-tick coast-down interval and 0.1 m/s initial speed retained. Independent vertical velocity change gives N/m=g+a_y; expected horizontal deceleration is -mu*(g+a_y), with zero linear damping and vertical contact normals separately checked. Contact-point tangential velocities must remain aligned with travel to within 1% in direction cosine, bounding the omitted lateral friction component. Solver normal impulses independently cross-check vertical momentum, never set the expected deceleration. The historical -mu*g target and residual remain explicit diagnostics.");
     expect(error).toBeLessThanOrEqual(.05); expect(velocities[2]).toBeGreaterThan(0);
+    expect(maximumNormalDeviation).toBeLessThanOrEqual(.001); expect(minimumTangentAlignmentZ).toBeGreaterThanOrEqual(.99); expect(zeroLinearDamping).toBe(true);
+    expect(normalMomentumRelativeError).toBeLessThanOrEqual(.01);
   });
 
   it("render scheduling gives the same actual-engine state at equal ticks", async () => {

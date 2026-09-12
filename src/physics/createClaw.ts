@@ -109,22 +109,25 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
       )),
       v("armMassKg"), PhysicsMotionType.DYNAMIC, angle,
     );
+    // Havok's hinge uses its primary angular axis for twist and the other two
+    // for locked swing. Align that primary axis with physical local Z instead
+    // of freeing the tertiary Euler axis of an X-aligned frame.
     const joint = new Physics6DoFConstraint({
       pivotA: new Vector3(side * v("hingeHalfSpacingM"), 0, 0),
       pivotB: new Vector3(0, length / 2, 0),
-      axisA: Vector3.Right(), axisB: Vector3.Right(),
+      axisA: Vector3.Forward(), axisB: Vector3.Forward(),
       perpAxisA: Vector3.Up(), perpAxisB: Vector3.Up(), collision: false,
-    }, [A.LINEAR_X, A.LINEAR_Y, A.LINEAR_Z, A.ANGULAR_X, A.ANGULAR_Y]
+    }, [A.LINEAR_X, A.LINEAR_Y, A.LINEAR_Z, A.ANGULAR_Y, A.ANGULAR_Z]
       .map(axis => ({ axis, minLimit: 0, maxLimit: 0 })), scene);
     head.addConstraint(arm, joint);
-    joint.setAxisMode(A.ANGULAR_Z, PhysicsConstraintAxisLimitMode.LIMITED);
+    joint.setAxisMode(A.ANGULAR_X, PhysicsConstraintAxisLimitMode.LIMITED);
     const endpoints = [
       side * (v("closedAngleRad") - v("limitMarginRad")),
       side * (v("openAngleRad") + v("limitMarginRad")),
     ];
-    joint.setAxisMinLimit(A.ANGULAR_Z, Math.min(...endpoints));
-    joint.setAxisMaxLimit(A.ANGULAR_Z, Math.max(...endpoints));
-    joint.setAxisMotorType(A.ANGULAR_Z, PhysicsConstraintMotorType.VELOCITY);
+    joint.setAxisMinLimit(A.ANGULAR_X, Math.min(...endpoints));
+    joint.setAxisMaxLimit(A.ANGULAR_X, Math.max(...endpoints));
+    joint.setAxisMotorType(A.ANGULAR_X, PhysicsConstraintMotorType.VELOCITY);
     joints.push(joint);
     arm.setCollisionCallbackEnabled(true);
     arm.getCollisionObservable().add(event => {
@@ -202,8 +205,8 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
       const moments = lastContacts.filter(c => c.armIndex === index && c.momentArmM > 0).map(c => c.momentArmM);
       const lever = moments.length ? Math.min(...moments) : Math.abs(v("armLengthM") * Math.cos(actual));
       const demand = motorDemand(actual, targetAngle, lever, command.claw, profile);
-      joints[index].setAxisMotorMaxForce(A.ANGULAR_Z, demand.torqueLimitNm);
-      joints[index].setAxisMotorTarget(A.ANGULAR_Z, (index === 0 ? -1 : 1) * demand.targetSpeedRadps);
+      joints[index].setAxisMotorMaxForce(A.ANGULAR_X, demand.torqueLimitNm);
+      joints[index].setAxisMotorTarget(A.ANGULAR_X, (index === 0 ? -1 : 1) * demand.targetSpeedRadps);
       return Object.freeze({ armIndex: index, angleRad: actual, targetAngleRad: targetAngle, ...demand });
     });
   };

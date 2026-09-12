@@ -28,6 +28,10 @@
 - This milestone includes functional front/side cameras and a collapsible diagnostic panel. Full replay, A/B comparison, slow-motion playback, sound and final arcade art remain later milestones; they are not removed from the full product spec.
 - Execution authorized by the user’s subsequent “Proceed”. Deployment remains conditional on the acceptance gates below.
 
+## Engineering deployment authorization — 2026-09-12
+
+The user's later instruction, “修正1後commit and deploy”, authorizes an engineering deployment after the three failed physical criteria are fixed and automated verification passes. Recording calibration, untouched holdout, real-iPhone acceptance and visual inspection remain separate, unverified evidence requirements for a validated release. They no longer block this specifically authorized engineering deployment. Historical execution status below records the earlier review; current evidence is maintained in `docs/validation/final-review-status.md`.
+
 ## Evidence and release labels
 
 Use three separate completion labels:

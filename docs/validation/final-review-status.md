@@ -2,7 +2,13 @@
 
 ## Result
 
-Whole-branch software review is clean at local commit `ccc8c87`. Release remains an **engineering fixture** and is not eligible to merge or deploy: current actual-Havok verification has three failed criteria within two failing tests, and recording, holdout, physical-iPhone, and screenshot-inspection evidence remains blocked or not run.
+Whole-branch software review is clean at `ccc8c87`; the later physical fixes in `de4cfe1` also passed independent scoped review. Two of the three physical criteria are corrected. Actual-Havok verification now reports **27 passed / 1 failed**: penetration remains **1.681608576 mm > 1 mm**.
+
+The user explicitly authorized “修正1後commit and deploy”. Engineering deployment is authorized once these physical failures are fixed and automated verification passes; recording, holdout and real-iPhone gaps remain separately unverified. The remaining physical failure still prevents satisfying that condition. No merge or deployment of this branch has occurred. The deployed previous main commit is `5daa534b4252740f477b7ae591d036e85fbf142a`.
+
+The [physical-fix report](physical-gate-fixes.md) and [raw experiments](physical-gate-experiments.json) retain the rejected numerical, collider, initial-condition and equivalent-bearing investigations. They did not meet all gates together and were reverted. No tolerance, coefficient, mass, inertia, gravity or final fixed timestep was changed. The design specification names Havok as a core technology; a replacement backend or a sourced finite-force structural redesign needs a deliberate architecture decision.
+
+Deployment preparation in `ebf1eeb` adds a two-attempt test against the actual Pages URL after publication. Typecheck, exact test discovery, and independent configuration review pass. This is preparation only; the live test has not run. The cloud browser reports WebGL unsupported on the prior site, so it cannot provide interactive visual acceptance here.
 
 CI [run 34681268756](https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34681268756), [job 103520221186](https://github.com/hkspurs/bridge-lab-simulator/actions/runs/34681268756/job/103520221186), tests remote `22499d7e`, whose tree exactly matches local `ccc8c87`. Lint, typecheck, and build passed; 135 source tests passed; physics reported 26 passed / 2 failed tests with the three metrics below; all 10 Chromium/WebKit cases passed in 56.8 seconds; deploy was skipped. Artifact `10294019034`, `acceptance-evidence` (40,618,665 bytes), expires 2026-09-26.
 
@@ -16,9 +22,9 @@ CI [run 34681268756](https://github.com/hkspurs/bridge-lab-simulator/actions/run
 
 The pre-edit focused run produced 4 expected failures in 2 files. The identical post-edit run passed all 4. A broader focused run passed 45 tests across the sequence, scene, and real-Havok claw fixtures; lint, typecheck, and build passed.
 
-## Current gates
+## Historical gates before `de4cfe1`
 
-`npm run test:physics` reports 26 passed and 2 failed tests. Three criteria fail without tolerance changes:
+At `ccc8c87`, `npm run test:physics` reported 26 passed and 2 failed tests. The three baseline criteria were:
 
 - rod-sliding relative error **0.06069007482201361** (**6.069007482201361%**), limit **0.05** (**5%**);
 - contact penetration **0.001681608575842708 m**, limit **0.001 m**;

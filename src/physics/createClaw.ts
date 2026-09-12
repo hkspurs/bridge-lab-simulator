@@ -1,7 +1,12 @@
 import { Vector3, Quaternion } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
-import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
+import "@babylonjs/core/Rendering/edgesRenderer";
+import { clawArmGeometry } from "./clawGeometry";
+import { PhysicsShape, PhysicsShapeBox, PhysicsShapeContainer } from "@babylonjs/core/Physics/v2/physicsShape";
 import { Physics6DoFConstraint, LockConstraint } from "@babylonjs/core/Physics/v2/physicsConstraint";
 import { PhysicsMotionType, PhysicsConstraintAxis as A, PhysicsConstraintMotorType, PhysicsConstraintAxisLimitMode } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import type { Scene } from "@babylonjs/core/scene";
@@ -43,7 +48,8 @@ export interface PhysicalClawRig extends ClawRig {
 export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig {
   validateClawProfile(profile);
   const bodies: PhysicsBody[] = [];
-  const shapes: PhysicsShapeBox[] = [];
+  const shapes: PhysicsShape[] = [];
+  const materials: StandardMaterial[] = [];
   const joints: Physics6DoFConstraint[] = [];
   const v = (key: Exclude<keyof ClawProfile, "id">) => profile[key].value;
   const box = (name: string, size: Vector3, position: Vector3, mass: number, motion = PhysicsMotionType.DYNAMIC, angle = 0) => {
@@ -98,10 +104,12 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
   let lastContacts: ContactSample[] = [];
   let samples: ActuatorSample[] = [];
   let dt = 1 / 120;
+  const armGeometries = [-1, 1].map(side => clawArmGeometry(profile, side));
   const arms = [-1, 1].map((side, index) => {
     const angle = side * v("openAngleRad");
     const length = v("armLengthM");
-    const arm = box(
+    const geometry = armGeometries[index];
+    const arm = geometry.folded ? foldedArm(index, side, angle) : box(
       `claw arm ${index}`, new Vector3(v("armThicknessM"), length, v("armDepthM")),
       head.transformNode.position.add(new Vector3(
         side * v("hingeHalfSpacingM") + Math.sin(angle) * length / 2,
@@ -114,7 +122,7 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
     // of freeing the tertiary Euler axis of an X-aligned frame.
     const joint = new Physics6DoFConstraint({
       pivotA: new Vector3(side * v("hingeHalfSpacingM"), 0, 0),
-      pivotB: new Vector3(0, length / 2, 0),
+      pivotB: geometry.pivot,
       axisA: Vector3.Forward(), axisB: Vector3.Forward(),
       perpAxisA: Vector3.Up(), perpAxisB: Vector3.Up(), collision: false,
     }, [A.LINEAR_X, A.LINEAR_Y, A.LINEAR_Z, A.ANGULAR_Y, A.ANGULAR_Z]
@@ -144,6 +152,44 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
     });
     return arm;
   });
+  function foldedArm(index: number, side: number, angle: number): PhysicsBody {
+    const geometry = armGeometries[index];
+    const root = new Mesh(`claw arm ${index}`, scene);
+    root.position.copyFrom(head.transformNode.position.add(new Vector3(side * v("hingeHalfSpacingM"), 0, 0)));
+    root.rotationQuaternion = Quaternion.RotationAxis(Vector3.Forward(), angle);
+    const material = new StandardMaterial(`clear claw plate ${index}`, scene);
+    material.diffuseColor = new Color3(.68, .88, .94);
+    material.specularColor = new Color3(.95, .98, 1);
+    material.alpha = .38;
+    material.backFaceCulling = false;
+    materials.push(material);
+    const compound = new PhysicsShapeContainer(scene);
+    shapes.push(compound);
+    for (const segment of geometry.segments) {
+      const mesh = CreateBox(`claw arm ${index} ${segment.name}`, {
+        width: segment.size.x, height: segment.size.y, depth: segment.size.z,
+      }, scene);
+      mesh.parent = root;
+      mesh.position.copyFrom(segment.center);
+      mesh.rotationQuaternion = segment.rotation.clone();
+      mesh.material = material;
+      mesh.enableEdgesRendering();
+      mesh.edgesWidth = 1.2;
+      mesh.edgesColor = new Color4(.63, .84, .91, .95);
+      const shape = new PhysicsShapeBox(Vector3.Zero(), Quaternion.Identity(), segment.size, scene);
+      shape.material = { friction: v("friction"), restitution: v("restitution") };
+      compound.addChild(shape, segment.center, segment.rotation);
+      shapes.push(shape);
+    }
+    root.computeWorldMatrix(true);
+    const body = new PhysicsBody(root, PhysicsMotionType.DYNAMIC, false, scene);
+    body.shape = compound;
+    // Havok derives COM/principal inertia from these exact rotated constituent
+    // boxes and scales the shape's distribution to the declared total mass.
+    body.setMassProperties({ mass: v("armMassKg") });
+    bodies.push(body);
+    return body;
+  }
   let command: RigCommand = Object.freeze({ travel: "stop", claw: "open" });
   let targetClawAngle = v("openAngleRad");
   let disposed = false;
@@ -203,7 +249,12 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
       if (command.claw === "close") targetClawAngle = v("closedAngleRad");
       const targetAngle = targetClawAngle;
       const moments = lastContacts.filter(c => c.armIndex === index && c.momentArmM > 0).map(c => c.momentArmM);
-      const lever = moments.length ? Math.min(...moments) : Math.abs(v("armLengthM") * Math.cos(actual));
+      // With no measured contact, use the terminal endpoint's perpendicular
+      // lever for a horizontal contact normal. Real contact replaces this on
+      // the following fixed step, including contact on either upper segment.
+      const toe = armGeometries[index].toe;
+      const signedAngle = (index === 0 ? -1 : 1) * actual;
+      const lever = moments.length ? Math.min(...moments) : Math.abs(toe.x * Math.sin(signedAngle) + toe.y * Math.cos(signedAngle));
       const demand = motorDemand(actual, targetAngle, lever, command.claw, profile);
       joints[index].setAxisMotorMaxForce(A.ANGULAR_X, demand.torqueLimitNm);
       joints[index].setAxisMotorTarget(A.ANGULAR_X, (index === 0 ? -1 : 1) * demand.targetSpeedRadps);
@@ -249,6 +300,7 @@ export function createClaw(scene: Scene, profile: ClawProfile): PhysicalClawRig 
         mesh.dispose();
       });
       shapes.forEach(shape => shape.dispose());
+      materials.forEach(material => material.dispose());
       contacts = [];
       lastContacts = [];
       samples = [];

@@ -1,3 +1,4 @@
+import { clawArmGeometry } from "../../src/physics/clawGeometry";
 // @vitest-environment node
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -215,7 +216,7 @@ describe("real Havok quantitative acceptance matrix", () => {
     let invalidPhysics = false, maximumJointEscapeM = 0;
     const rig = handle.rig!;
     const [carriage, head, stem] = rig.bodies;
-    const armLength = playableClawProfile.armLengthM.value;
+
     const suspensionLength = playableClawProfile.suspensionLengthM.value;
     const angleToleranceRad = playableClawProfile.angleToleranceRad.value;
     const jointNames = ["carriage-head-lock", "head-stem-lock", "left-arm-hinge", "right-arm-hinge"];
@@ -237,7 +238,7 @@ describe("real Havok quantitative acceptance matrix", () => {
       const armAngles = rig.arms.map((arm, index) => {
         const side = index === 0 ? -1 : 1;
         anchorErrors.push(point(head, new Vector3(side * playableClawProfile.hingeHalfSpacingM.value, 0, 0))
-          .subtract(point(arm, new Vector3(0, armLength / 2, 0))).length());
+          .subtract(point(arm, clawArmGeometry(playableClawProfile, side).pivot)).length());
         const relative = relativeRotation(head, arm);
         // Isolate permitted local-Z twist; the remaining swing measures both
         // locked X/Y rotations without conflating them with the hinge angle.

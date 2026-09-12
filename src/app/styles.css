@@ -4,7 +4,7 @@ body { margin: 0; overscroll-behavior: none; }
 button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
 button:focus-visible, summary:focus-visible { outline: 3px solid #ffbd59; outline-offset: 3px; }
 ::selection { color: #11161b; background: #ffbd59; }
-#app, [data-testid="bridge-lab-app"] { min-height: 100dvh; }
+#app, [data-testid="bridge-lab-app"] { height: 100dvh; }
 [data-testid="bridge-lab-app"] {
   display: grid; grid-template: auto minmax(0, 1fr) auto auto auto / 1fr; gap: .55rem;
   padding: max(.5rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));

@@ -6,3 +6,5 @@ playwright-report/
 upload/
 .DS_Store
 *.local
+
+physics-reports/

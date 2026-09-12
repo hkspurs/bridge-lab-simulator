@@ -10,12 +10,18 @@ import "@babylonjs/core/Physics/v2/physicsEngineComponent";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Scene } from "@babylonjs/core/scene";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import type { CalibrationProfile } from "../config/types";
+import type { SupportedCalibrationProfile } from "../config/types";
 import { validateProfile } from "../config/validateProfile";
 import { createBridge } from "./createBridge";
 import { createPrize } from "./createPrize";
 import { PhysicsClock } from "./PhysicsClock";
 import type { DiagnosticSnapshot } from "../diagnostics/createDiagnostics";
+import { isPlayableProfile } from "./createBridge";
+import { createClaw, type PhysicalClawRig } from "./createClaw";
+import { playableClawProfile } from "../config/playableClawProfile";
+import { CraneSequence, sequenceProfileFromClaw } from "../crane/CraneSequence";
+import type { InputEvent, RigObservation } from "../crane/types";
+import { stepSimulation } from "./stepSimulation";
 
 export type PhysicsSnapshotListener = (snapshot: DiagnosticSnapshot) => void;
 
@@ -25,6 +31,10 @@ export interface PhysicsSceneHandle {
   prize: Mesh;
   rods: Mesh[];
   clock: PhysicsClock;
+  rig?: PhysicalClawRig;
+  sequence?: CraneSequence;
+  dispatch(event: InputEvent): void;
+  newSetup(): void;
   onSnapshot(listener: PhysicsSnapshotListener): () => void;
   dispose(): void;
 }
@@ -35,7 +45,7 @@ export interface PhysicsSceneOptions {
   initializeHavok?: () => ReturnType<typeof HavokPhysics>;
 }
 
-export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: CalibrationProfile, options: PhysicsSceneOptions = {}): Promise<PhysicsSceneHandle> {
+export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: SupportedCalibrationProfile, options: PhysicsSceneOptions = {}): Promise<PhysicsSceneHandle> {
   const issues = validateProfile(profile);
   if (issues.length) throw new Error(`Invalid calibration profile: ${issues.map((issue) => `${issue.path}: ${issue.message}`).join("; ")}`);
   const stepSeconds = 1 / 120;
@@ -50,6 +60,7 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Cal
   const engine = options.createEngine?.(canvas) ?? new Engine(canvas, true);
   const scene = new Scene(engine);
   let disposed = false;
+  let physicalRig: PhysicalClawRig | undefined;
   let snapshotListeners: Set<PhysicsSnapshotListener> | undefined;
   const resize = () => engine.resize();
   const dispose = () => {
@@ -58,6 +69,7 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Cal
     snapshotListeners?.clear();
     engine.stopRenderLoop();
     if (typeof window !== "undefined") window.removeEventListener("resize", resize);
+    physicalRig?.dispose();
     scene.dispose();
     engine.dispose();
   };
@@ -79,17 +91,51 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Cal
     new HemisphericLight("calibration softbox", new Vector3(0, 1, -0.5), scene);
     const rods = createBridge(scene, profile);
     const prize = createPrize(scene, profile);
+    const rig = isPlayableProfile(profile) ? createClaw(scene, playableClawProfile) : undefined;
+    physicalRig = rig;
+    let sequence = rig ? new CraneSequence(sequenceProfileFromClaw(playableClawProfile)) : undefined;
     const bodies = [...rods, prize].map((mesh) => mesh.physicsBody!);
+    if (rig) bodies.push(...rig.bodies);
     const clock = new PhysicsClock({ stepSeconds, maxFrameSeconds: 0.1, maxStepsPerFrame: 12 });
     const listeners = new Set<PhysicsSnapshotListener>();
     snapshotListeners = listeners;
     let fixedStepCount = 0;
+    let paused = false;
+    let rebaseNextFrame = false;
+    let droppedWallSeconds = 0;
+    const resetBodies = [prize.physicsBody!, ...(rig?.bodies ?? [])];
+    const initialTransforms = resetBodies.map(body => ({
+      body, position: body.transformNode.position.clone(), rotation: body.transformNode.rotationQuaternion!.clone(),
+    }));
+    const composedRig = rig && {
+      ...rig,
+      observe(): RigObservation {
+        const value = rig.observe();
+        const linear = prize.physicsBody!.getLinearVelocity().length();
+        const angular = prize.physicsBody!.getAngularVelocity().length();
+        return Object.freeze({ ...value,
+          prizeLinearSpeedMps: linear, prizeAngularSpeedRadps: angular,
+          prizeSettled: linear < .005 && angular < .05,
+          invalidPhysics: value.invalidPhysics || ![...prize.position.asArray(), ...prize.rotationQuaternion!.asArray(), linear, angular].every(Number.isFinite),
+        });
+      },
+    };
     engine.runRenderLoop(() => {
       if (disposed) return;
       const frameMilliseconds = engine.getDeltaTime();
-      const sample = clock.advance(frameMilliseconds / 1000, (dt) => plugin.executeStep(dt, bodies));
+      const sample = paused || rebaseNextFrame
+        ? { steps: 0, alpha: 0, simulatedSeconds: 0, droppedSeconds: frameMilliseconds / 1000 }
+        : clock.advance(frameMilliseconds / 1000, (dt) => {
+          if (sequence && composedRig) stepSimulation(dt, sequence, composedRig, step => plugin.executeStep(step, bodies));
+          else plugin.executeStep(dt, bodies);
+        });
+      rebaseNextFrame = false;
       fixedStepCount += sample.steps;
+      droppedWallSeconds += sample.droppedSeconds;
       const quaternion = prize.rotationQuaternion;
+      const linear = prize.physicsBody!.getLinearVelocity();
+      const angular = prize.physicsBody!.getAngularVelocity();
+      const actuator = rig?.actuatorSamples() ?? [];
       const snapshot: DiagnosticSnapshot = Object.freeze({
         position: Object.freeze({ x: prize.position.x, y: prize.position.y, z: prize.position.z }),
         rotation: Object.freeze({
@@ -100,6 +146,22 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Cal
         }),
         fixedStepCount,
         renderFps: frameMilliseconds > 0 ? 1000 / frameMilliseconds : 0,
+        profileId: profile.id,
+        phase: sequence?.phase,
+        paused,
+        droppedWallSeconds,
+        prizeLinearVelocity: Object.freeze({ x: linear.x, y: linear.y, z: linear.z }),
+        prizeAngularVelocity: Object.freeze({ x: angular.x, y: angular.y, z: angular.z }),
+        clawAnglesRad: Object.freeze(actuator.map(value => value.angleRad)),
+        clawTargetAnglesRad: Object.freeze(actuator.map(value => value.targetAngleRad)),
+        actuatorTorqueLimitsNm: Object.freeze(actuator.map(value => value.torqueLimitNm)),
+        contacts: Object.freeze((rig?.contactSamples() ?? []).map(value => Object.freeze({ ...value, normal: Object.freeze({ ...value.normal }) }))),
+        prizeOutOfReach: prize.position.y < -profile.prize.heightM.value,
+        prizeInstanceId: prize.uniqueId,
+        ...(rig ? {
+          carriagePosition: Object.freeze({ x: rig.bodies[0].transformNode.position.x, y: rig.bodies[0].transformNode.position.y, z: rig.bodies[0].transformNode.position.z }),
+          carriageLinearVelocity: Object.freeze({ x: rig.bodies[0].getLinearVelocity().x, y: rig.bodies[0].getLinearVelocity().y, z: rig.bodies[0].getLinearVelocity().z }),
+        } : {}),
       });
       listeners.forEach((listener) => listener(snapshot));
       // Babylon syncs current physics pose in executeStep; it has no public
@@ -112,7 +174,47 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Cal
       listeners.add(listener);
       return () => listeners.delete(listener);
     };
-    return { engine, scene, prize, rods, clock, onSnapshot, dispose };
+    const dispatch = (event: InputEvent) => {
+      if (!sequence || !rig) return;
+      if (paused && event.type !== "resume" && event.type !== "cancel") return;
+      if (event.type === "cancel") {
+        sequence.dispatch(event);
+        rig.command({ travel: "stop", claw: "hold" });
+        paused = true;
+        clock.discardAccumulatedTime();
+        return;
+      }
+      if (event.type === "resume") {
+        if (!paused) return;
+        sequence.dispatch(event);
+        rig.command({ travel: "stop", claw: "hold" });
+        clock.discardAccumulatedTime();
+        rebaseNextFrame = true;
+        paused = false;
+        return;
+      }
+      sequence.dispatch(event);
+    };
+    const newSetup = () => {
+      clock.discardAccumulatedTime();
+      for (const { body, position, rotation } of initialTransforms) {
+        body.transformNode.position.copyFrom(position);
+        body.transformNode.rotationQuaternion!.copyFrom(rotation);
+        body.transformNode.computeWorldMatrix(true);
+        const disabledPreStep = body.disablePreStep;
+        body.disablePreStep = false;
+        plugin.setPhysicsBodyTransformation(body, body.transformNode);
+        body.disablePreStep = disabledPreStep;
+        body.setLinearVelocity(Vector3.Zero());
+        body.setAngularVelocity(Vector3.Zero());
+      }
+      if (rig) {
+        rig.command({ travel: "stop", claw: "open" });
+        sequence = new CraneSequence(sequenceProfileFromClaw(playableClawProfile));
+      }
+      paused = false;
+    };
+    return { engine, scene, prize, rods, clock, rig, get sequence() { return sequence; }, dispatch, newSetup, onSnapshot, dispose };
   } catch (error) {
     dispose();
     throw error;

@@ -8,9 +8,9 @@ import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsMotionType, type PhysicsMassProperties } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { PhysicsShapeConvexHull } from "@babylonjs/core/Physics/v2/physicsShape";
 import type { Scene } from "@babylonjs/core/scene";
-import type { CalibrationProfile } from "../config/types";
+import type { PlayableRod, SupportedCalibrationProfile } from "../config/types";
 import { computeMassProperties, type MassProperties } from "./massProperties";
-import { contactMaterial } from "./createBridge";
+import { contactMaterial, isPlayableProfile, rodOrientationQuaternion } from "./createBridge";
 
 /** Domain (width, depth, height) -> engine (x, y, z) = (x, z, -y).
  * Havok accepts principal moments plus their orientation, not a full tensor.
@@ -94,7 +94,23 @@ function addArtwork(prize: Mesh, width: number, height: number, depth: number, s
   lettering.material = red;
 }
 
-export function createPrize(scene: Scene, profile: CalibrationProfile) {
+function playableRodTop(rod: PlayableRod): number {
+  const rotation = rodOrientationQuaternion(rod);
+  const matrix = Matrix.Identity();
+  Matrix.FromQuaternionToRef(rotation, matrix);
+  const axes = [Vector3.Right(), Vector3.Up(), Vector3.Forward()].map((axis) => Vector3.TransformNormal(axis, matrix));
+  if (rod.crossSection.kind === "circular") {
+    return rod.centerM.y.value + Math.abs(axes[2].y) * rod.lengthM.value / 2 + Math.sqrt(Math.max(0, 1 - axes[2].y ** 2)) * rod.crossSection.diameterM.value / 2;
+  }
+  return rod.centerM.y.value + Math.abs(axes[0].y) * rod.crossSection.widthM.value / 2 + Math.abs(axes[1].y) * rod.crossSection.heightM.value / 2 + Math.abs(axes[2].y) * rod.lengthM.value / 2;
+}
+
+function prizeSpawnY(profile: SupportedCalibrationProfile, height: number): number {
+  if (!isPlayableProfile(profile)) return height / 2 + profile.bridge.rodDiameterM.value / 2 + Math.abs(profile.bridge.rodHeightDeltaM.value) / 2 + 0.002;
+  return height / 2 + Math.max(...profile.bridge.rods.map(playableRodTop)) + 0.002;
+}
+
+export function createPrize(scene: Scene, profile: SupportedCalibrationProfile) {
   const width = profile.prize.widthM.value;
   const height = profile.prize.heightM.value;
   const depth = profile.prize.depthM.value;
@@ -121,7 +137,7 @@ export function createPrize(scene: Scene, profile: CalibrationProfile) {
   shape.material = contactMaterial(profile);
   prize.onDisposeObservable.add(() => shape.dispose());
   // 2 mm air gap above the higher crown. Only Havok changes pose from here.
-  prize.position.y = height / 2 + profile.bridge.rodDiameterM.value / 2 + Math.abs(profile.bridge.rodHeightDeltaM.value) / 2 + 0.002;
+  prize.position.y = prizeSpawnY(profile, height);
   prize.computeWorldMatrix(true);
   const body = new PhysicsBody(prize, PhysicsMotionType.DYNAMIC, false, scene);
   body.shape = shape;

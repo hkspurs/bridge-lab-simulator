@@ -8,7 +8,7 @@ export type SourceKind =
   | "engineering-initial"
   | "unknown";
 
-export type Unit = "1" | "kg" | "m" | "m/s²" | "s" | "s⁻¹";
+export type Unit = "1" | "deg" | "kg" | "m" | "m/s²" | "s" | "s⁻¹";
 
 export interface SourcedParameter {
   readonly key: string;
@@ -25,6 +25,43 @@ export interface Vector3M {
   readonly x: number;
   readonly y: number;
   readonly z: number;
+}
+
+export interface SourcedVector3M {
+  readonly x: SourcedParameter;
+  readonly y: SourcedParameter;
+  readonly z: SourcedParameter;
+}
+
+export interface RodOrientation {
+  /** Right-handed intrinsic XYZ Euler angles in engine X-right/Y-up/Z-depth axes. */
+  readonly convention: "intrinsic-xyz-degrees";
+  readonly xDegrees: SourcedParameter;
+  readonly yDegrees: SourcedParameter;
+  readonly zDegrees: SourcedParameter;
+}
+
+export type RodCrossSection =
+  | { readonly kind: "circular"; readonly diameterM: SourcedParameter }
+  | {
+      readonly kind: "rounded-rectangular";
+      readonly widthM: SourcedParameter;
+      readonly heightM: SourcedParameter;
+      readonly cornerRadiusM: SourcedParameter;
+    };
+
+export interface PlayableRod {
+  readonly id: "rod-1" | "rod-2" | "rod-3" | "rod-4";
+  readonly centerM: SourcedVector3M;
+  readonly orientation: RodOrientation;
+  readonly lengthM: SourcedParameter;
+  readonly crossSection: RodCrossSection;
+  readonly materialId: string;
+  readonly contact: {
+    readonly staticFriction: SourcedParameter;
+    readonly dynamicFriction: SourcedParameter;
+    readonly restitution: SourcedParameter;
+  };
 }
 
 export type NumericRange = readonly [number, number];
@@ -90,6 +127,22 @@ export interface CalibrationProfile {
   };
 }
 
+/** Four-rod engineering fixture. CalibrationProfile remains the legacy v0.1 contract. */
+export interface PlayableCalibrationProfile
+  extends Omit<CalibrationProfile, "bridge"> {
+  readonly kind: "playable-four-rod";
+  readonly bridge: {
+    readonly localAxes: {
+      readonly x: "cross-section-width";
+      readonly y: "cross-section-height";
+      readonly z: "longitudinal";
+    };
+    readonly rods: readonly PlayableRod[];
+  };
+}
+
+export type SupportedCalibrationProfile = CalibrationProfile | PlayableCalibrationProfile;
+
 export type ProfileIssueCode =
   | "OUT_OF_RANGE"
   | "INVALID_RANGE"
@@ -99,7 +152,13 @@ export type ProfileIssueCode =
   | "INVALID_CONFIDENCE"
   | "INVALID_UNIT"
   | "BLOCK_OUTSIDE_ENVELOPE"
-  | "DYNAMIC_EXCEEDS_STATIC";
+  | "DYNAMIC_EXCEEDS_STATIC"
+  | "INVALID_ROD_COUNT"
+  | "DUPLICATE_ROD_ID"
+  | "INVALID_ROD_ID_SET"
+  | "OUT_OF_DOMAIN"
+  | "RANGE_OUT_OF_DOMAIN"
+  | "UNSUPPORTED_CROSS_SECTION";
 
 export interface ProfileIssue {
   readonly path: string;

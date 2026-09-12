@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PhysicsClock } from "./PhysicsClock";
 
 describe("PhysicsClock", () => {
@@ -23,11 +23,36 @@ describe("PhysicsClock", () => {
     expect(run(60)).toBeCloseTo(run(120), 12);
   });
 
+  it("produces the same controlled result when inputs occur at fixed ticks", () => {
+    const run = (fps: number) => {
+      const clock = new PhysicsClock({ stepSeconds: 1 / 120, maxFrameSeconds: 0.1, maxStepsPerFrame: 24 });
+      let tick = 0, position = 0, held = false;
+      for (let frame = 0; frame < fps; frame++) clock.advance(1 / fps, dt => {
+        if (tick === 10) held = true;
+        if (tick === 70) held = false;
+        if (held) position += .1 * dt;
+        tick++;
+      });
+      return { tick, position };
+    };
+    expect(run(30)).toEqual(run(60));
+    expect(run(60)).toEqual(run(120));
+  });
+
   it("reports discarded wall time instead of changing the step", () => {
     const clock = new PhysicsClock({ stepSeconds: 1 / 120, maxFrameSeconds: 0.1, maxStepsPerFrame: 12 });
     const sample = clock.advance(0.5, () => undefined);
     expect(sample.steps).toBe(12);
     expect(sample.droppedSeconds).toBeCloseTo(0.4, 12);
+  });
+
+  it("discards the fractional accumulator when interrupted", () => {
+    const clock = new PhysicsClock({ stepSeconds: 1 / 120, maxFrameSeconds: 0.1, maxStepsPerFrame: 12 });
+    clock.advance(1 / 240, () => undefined);
+    clock.discardAccumulatedTime();
+    const step = vi.fn();
+    expect(clock.advance(1 / 240, step).steps).toBe(0);
+    expect(step).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -1,11 +1,14 @@
 import type {
-  CalibrationProfile,
   Confidence,
   MassBlock,
   NumericRange,
+  PlayableCalibrationProfile,
+  PlayableRod,
   ProfileIssue,
   SourceKind,
   SourcedParameter,
+  SupportedCalibrationProfile,
+  Unit,
 } from "./types";
 
 const confidenceLevels: readonly Confidence[] = ["high", "medium", "low", "unknown"];
@@ -18,27 +21,31 @@ const sourceKinds: readonly SourceKind[] = [
   "unknown",
 ];
 const vectorAxes = ["x", "y", "z"] as const;
+type ParameterRule = {
+  readonly path: string;
+  readonly parameter: SourcedParameter;
+  readonly expectedUnit: Unit;
+  readonly domain?: NumericRange;
+  readonly positive?: boolean;
+};
 
 const sourcedParameters = (
-  profile: CalibrationProfile
-): readonly { readonly path: string; readonly parameter: SourcedParameter }[] => [
-  { path: "physics.stepSeconds", parameter: profile.physics.stepSeconds },
-  { path: "environment.gravityMps2", parameter: profile.environment.gravityMps2 },
-  { path: "prize.widthM", parameter: profile.prize.widthM },
-  { path: "prize.depthM", parameter: profile.prize.depthM },
-  { path: "prize.heightM", parameter: profile.prize.heightM },
-  { path: "prize.massKg", parameter: profile.prize.massKg },
-  { path: "prize.centerOfMassRatioX", parameter: profile.prize.centerOfMassRatioX },
-  { path: "prize.centerOfMassRatioY", parameter: profile.prize.centerOfMassRatioY },
-  { path: "prize.centerOfMassRatioZ", parameter: profile.prize.centerOfMassRatioZ },
-  { path: "bridge.rodDiameterM", parameter: profile.bridge.rodDiameterM },
-  { path: "bridge.rodCenterDistanceM", parameter: profile.bridge.rodCenterDistanceM },
-  { path: "bridge.rodHeightDeltaM", parameter: profile.bridge.rodHeightDeltaM },
-  { path: "contacts.boxRodStaticFriction", parameter: profile.contacts.boxRodStaticFriction },
-  { path: "contacts.boxRodDynamicFriction", parameter: profile.contacts.boxRodDynamicFriction },
-  { path: "contacts.restitution", parameter: profile.contacts.restitution },
-  { path: "damping.linearPerSecond", parameter: profile.damping.linearPerSecond },
-  { path: "damping.angularPerSecond", parameter: profile.damping.angularPerSecond },
+  profile: SupportedCalibrationProfile
+): readonly ParameterRule[] => [
+  { path: "physics.stepSeconds", parameter: profile.physics.stepSeconds, expectedUnit: "s", positive: true },
+  { path: "environment.gravityMps2", parameter: profile.environment.gravityMps2, expectedUnit: "m/s²", domain: [0, Infinity] },
+  { path: "prize.widthM", parameter: profile.prize.widthM, expectedUnit: "m", positive: true },
+  { path: "prize.depthM", parameter: profile.prize.depthM, expectedUnit: "m", positive: true },
+  { path: "prize.heightM", parameter: profile.prize.heightM, expectedUnit: "m", positive: true },
+  { path: "prize.massKg", parameter: profile.prize.massKg, expectedUnit: "kg", positive: true },
+  { path: "prize.centerOfMassRatioX", parameter: profile.prize.centerOfMassRatioX, expectedUnit: "1", domain: [-1, 1] },
+  { path: "prize.centerOfMassRatioY", parameter: profile.prize.centerOfMassRatioY, expectedUnit: "1", domain: [-1, 1] },
+  { path: "prize.centerOfMassRatioZ", parameter: profile.prize.centerOfMassRatioZ, expectedUnit: "1", domain: [-1, 1] },
+  { path: "contacts.boxRodStaticFriction", parameter: profile.contacts.boxRodStaticFriction, expectedUnit: "1", domain: [0, 1] },
+  { path: "contacts.boxRodDynamicFriction", parameter: profile.contacts.boxRodDynamicFriction, expectedUnit: "1", domain: [0, 1] },
+  { path: "contacts.restitution", parameter: profile.contacts.restitution, expectedUnit: "1", domain: [0, 1] },
+  { path: "damping.linearPerSecond", parameter: profile.damping.linearPerSecond, expectedUnit: "s⁻¹", domain: [0, Infinity] },
+  { path: "damping.angularPerSecond", parameter: profile.damping.angularPerSecond, expectedUnit: "s⁻¹", domain: [0, Infinity] },
 ];
 
 const rangeText = (minimum: number, maximum: number, unit: string): string =>
@@ -84,7 +91,7 @@ const validateMassBlockValue = (
   }
 };
 
-const blockFitsPrizeEnvelope = (block: MassBlock, profile: CalibrationProfile): boolean => {
+const blockFitsPrizeEnvelope = (block: MassBlock, profile: SupportedCalibrationProfile): boolean => {
   const { widthM, depthM, heightM } = profile.prize;
   const values = [
     block.centerM.x,
@@ -114,7 +121,7 @@ const validateMassBlock = (
   issues: ProfileIssue[],
   block: MassBlock,
   index: number,
-  profile: CalibrationProfile
+  profile: SupportedCalibrationProfile
 ): void => {
   const path = `prize.massBlocks[${index}]`;
 
@@ -197,10 +204,52 @@ const validateMassBlock = (
   }
 };
 
-export const validateProfile = (profile: CalibrationProfile): readonly ProfileIssue[] => {
+const isPlayableProfile = (
+  profile: SupportedCalibrationProfile
+): profile is PlayableCalibrationProfile =>
+  "kind" in profile && profile.kind === "playable-four-rod";
+
+const rodParameters = (rod: PlayableRod, index: number) => {
+  const path = `bridge.rods[${index}]`;
+  const values: ParameterRule[] = [
+    ...vectorAxes.map((axis) => ({ path: `${path}.centerM.${axis}`, parameter: rod.centerM[axis], expectedUnit: "m" as const })),
+    { path: `${path}.orientation.xDegrees`, parameter: rod.orientation.xDegrees, expectedUnit: "deg", domain: [-180, 180] },
+    { path: `${path}.orientation.yDegrees`, parameter: rod.orientation.yDegrees, expectedUnit: "deg", domain: [-180, 180] },
+    { path: `${path}.orientation.zDegrees`, parameter: rod.orientation.zDegrees, expectedUnit: "deg", domain: [-180, 180] },
+    { path: `${path}.lengthM`, parameter: rod.lengthM, expectedUnit: "m", positive: true },
+    { path: `${path}.contact.staticFriction`, parameter: rod.contact.staticFriction, expectedUnit: "1", domain: [0, 1] },
+    { path: `${path}.contact.dynamicFriction`, parameter: rod.contact.dynamicFriction, expectedUnit: "1", domain: [0, 1] },
+    { path: `${path}.contact.restitution`, parameter: rod.contact.restitution, expectedUnit: "1", domain: [0, 1] },
+  ];
+  if (rod.crossSection.kind === "circular") {
+    values.push({ path: `${path}.crossSection.diameterM`, parameter: rod.crossSection.diameterM, expectedUnit: "m", positive: true });
+  } else if (rod.crossSection.kind === "rounded-rectangular") {
+    values.push(
+      { path: `${path}.crossSection.widthM`, parameter: rod.crossSection.widthM, expectedUnit: "m", positive: true },
+      { path: `${path}.crossSection.heightM`, parameter: rod.crossSection.heightM, expectedUnit: "m", positive: true },
+      { path: `${path}.crossSection.cornerRadiusM`, parameter: rod.crossSection.cornerRadiusM, expectedUnit: "m", positive: true }
+    );
+  }
+  return values;
+};
+
+export const validateProfile = (profile: SupportedCalibrationProfile): readonly ProfileIssue[] => {
   const issues: ProfileIssue[] = [];
 
-  for (const { path, parameter } of sourcedParameters(profile)) {
+  const parameters: ParameterRule[] = [
+    ...sourcedParameters(profile),
+  ];
+  if (isPlayableProfile(profile)) {
+    profile.bridge.rods.forEach((rod, index) => parameters.push(...rodParameters(rod, index)));
+  } else {
+    parameters.push(
+      { path: "bridge.rodDiameterM", parameter: profile.bridge.rodDiameterM, expectedUnit: "m", positive: true },
+      { path: "bridge.rodCenterDistanceM", parameter: profile.bridge.rodCenterDistanceM, expectedUnit: "m", positive: true },
+      { path: "bridge.rodHeightDeltaM", parameter: profile.bridge.rodHeightDeltaM, expectedUnit: "m" }
+    );
+  }
+
+  for (const { path, parameter, expectedUnit, domain, positive } of parameters) {
     const [minimum, maximum] = parameter.allowedRange;
 
     if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum > maximum) {
@@ -212,7 +261,7 @@ export const validateProfile = (profile: CalibrationProfile): readonly ProfileIs
       continue;
     }
 
-    if (!Number.isFinite(parameter.value)) {
+    if (!Number.isFinite(parameter.value) || (positive && parameter.value <= 0)) {
       issues.push({
         path,
         code: "INVALID_VALUE",
@@ -233,11 +282,55 @@ export const validateProfile = (profile: CalibrationProfile): readonly ProfileIs
         message: `${parameter.key} must include a source reference`,
       });
     }
+    if (parameter.unit !== expectedUnit) {
+      issues.push({ path, code: "INVALID_UNIT", message: `${parameter.key} must use ${expectedUnit}` });
+    }
+    if (!sourceKinds.includes(parameter.sourceKind)) {
+      issues.push({ path, code: "INVALID_SOURCE_KIND", message: `${parameter.key} source kind is invalid` });
+    }
+    if (!confidenceLevels.includes(parameter.confidence)) {
+      issues.push({ path, code: "INVALID_CONFIDENCE", message: `${parameter.key} confidence is invalid` });
+    }
+    if (domain && (parameter.value < domain[0] || parameter.value > domain[1])) {
+      issues.push({ path, code: "OUT_OF_DOMAIN", message: `${parameter.key} is outside its physical domain` });
+    }
+    const rangeOutsideDomain = domain &&
+      (parameter.allowedRange[0] < domain[0] || parameter.allowedRange[1] > domain[1]);
+    if (rangeOutsideDomain || (positive && parameter.allowedRange[0] <= 0)) {
+      issues.push({
+        path,
+        code: "RANGE_OUT_OF_DOMAIN",
+        message: `${parameter.key} allowed range extends outside its physical domain`,
+      });
+    }
   }
 
   profile.prize.massBlocks.forEach((block, index) => {
     validateMassBlock(issues, block, index, profile);
   });
+
+  if (isPlayableProfile(profile)) {
+    if (profile.bridge.rods.length !== 4) {
+      issues.push({ path: "bridge.rods", code: "INVALID_ROD_COUNT", message: "Playable profiles require exactly four rods" });
+    }
+    const ids = new Set<string>();
+    profile.bridge.rods.forEach((rod, index) => {
+      if (ids.has(rod.id)) {
+        issues.push({ path: `bridge.rods[${index}].id`, code: "DUPLICATE_ROD_ID", message: `Duplicate rod ID: ${rod.id}` });
+      }
+      ids.add(rod.id);
+      if (rod.crossSection.kind !== "circular" && rod.crossSection.kind !== "rounded-rectangular") {
+        issues.push({ path: `bridge.rods[${index}].crossSection`, code: "UNSUPPORTED_CROSS_SECTION", message: `Unsupported rod cross-section` });
+      }
+      if (rod.contact.dynamicFriction.value > rod.contact.staticFriction.value) {
+        issues.push({ path: `bridge.rods[${index}].contact.dynamicFriction`, code: "DYNAMIC_EXCEEDS_STATIC", message: "Dynamic friction must not exceed static friction" });
+      }
+    });
+    const stableIds = ["rod-1", "rod-2", "rod-3", "rod-4"];
+    if (stableIds.some((id) => !ids.has(id))) {
+      issues.push({ path: "bridge.rods", code: "INVALID_ROD_ID_SET", message: "Playable profiles require rod-1 through rod-4" });
+    }
+  }
 
   if (
     profile.contacts.boxRodDynamicFriction.value >

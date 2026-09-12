@@ -8,10 +8,11 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "vitest run src",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:physics": "vitest run tests/physics --reporter=default --reporter=json --outputFile=physics-reports/tests.json"
   },
   "dependencies": {
     "@babylonjs/core": "^8.38.1",

@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -22,9 +21,43 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:run
+      - name: Verify physical bridge and finite-force mechanism
+        run: npx vitest run tests/physics/bridge.spec.ts tests/physics/claw.spec.ts
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+        if: ${{ !cancelled() }}
+      - run: npx playwright install --with-deps chromium webkit
+        if: ${{ !cancelled() }}
       - run: npm run test:browser
+        if: ${{ !cancelled() }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-evidence
+          path: |
+            test-results/
+            playwright-report/
+            physics-reports/
+          retention-days: 14
+
+  physics-acceptance:
+    name: Physical accuracy acceptance (engineering preview)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      # Retain every assertion and the red result. This job does not certify
+      # the engineering preview as a physically validated release.
+      - run: npm run test:physics
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: physical-accuracy-evidence
+          path: physics-reports/
+          retention-days: 14
 
   deploy:
     permissions:
@@ -59,3 +92,17 @@ jobs:
         uses: actions/deploy-pages@v4
         with:
           artifact_name: github-pages-${{ github.run_attempt }}
+      - name: Install browser for live deployment verification
+        run: npx playwright install --with-deps chromium
+      - name: Verify two consecutive attempts on the deployed site
+        run: npm run test:browser -- --project=chromium-touch-landscape --grep "two complete attempts"
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ steps.deployment.outputs.page_url }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-smoke-evidence
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14

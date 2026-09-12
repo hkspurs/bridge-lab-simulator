@@ -137,6 +137,7 @@ export async function createPhysicsScene(canvas: HTMLCanvasElement, profile: Sup
       const angular = prize.physicsBody!.getAngularVelocity();
       const actuator = rig?.actuatorSamples() ?? [];
       const snapshot: DiagnosticSnapshot = Object.freeze({
+        camera: Object.freeze({ alpha: camera.alpha, beta: camera.beta, radius: camera.radius }),
         position: Object.freeze({ x: prize.position.x, y: prize.position.y, z: prize.position.z }),
         rotation: Object.freeze({
           x: quaternion?.x ?? 0,

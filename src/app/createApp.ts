@@ -39,7 +39,8 @@ export function createApp(host: HTMLElement): BridgeLabApp {
   resume.disabled = true; next.disabled = true; actions.append(resume, next, reset);
   const portrait = document.createElement("p"); portrait.className = "portrait-message"; portrait.textContent = "Rotate to landscape to play.";
 
-  stage.append(canvas, portrait); root.append(header, stage, status, actions);
+  const cameraHint = document.createElement("p"); cameraHint.className = "camera-hint"; cameraHint.textContent = "Drag to orbit · Pinch to zoom";
+  stage.append(canvas, portrait, cameraHint); root.append(header, stage, status, actions);
   host.append(root);
 
   let disposed = false;
@@ -84,8 +85,7 @@ export function createApp(host: HTMLElement): BridgeLabApp {
             controls?.update({ phase, paused });
             resume.disabled = !paused;
             next.disabled = paused || phase !== "REVIEW";
-            const manual = !paused && phase === "READY";
-            front.disabled = !manual; side.disabled = !manual;
+            front.disabled = false; side.disabled = false;
             const messages: Record<string, string> = {
               READY: "Hold 1 to move right.", MOVE_AXIS_1: "Release 1 to lock rightward travel.", MOVE_AXIS_2: "Hold 2 to move back; release starts the drop.",
               DROP: "Lowering the claw automatically…", CLOSE: "Closing the claw automatically…", LIFT: "Lifting automatically…", RETURN: "Returning home automatically…",

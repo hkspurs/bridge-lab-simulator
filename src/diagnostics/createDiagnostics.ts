@@ -10,6 +10,7 @@ import { isPlayableProfile } from "../physics/createBridge";
 import { computeMassProperties } from "../physics/massProperties";
 
 export interface DiagnosticSnapshot {
+  readonly camera?: Readonly<{ alpha: number; beta: number; radius: number }>;
   readonly position: Readonly<{ x: number; y: number; z: number }>;
   readonly rotation: Readonly<{ x: number; y: number; z: number; w: number }>;
   readonly fixedStepCount: number;

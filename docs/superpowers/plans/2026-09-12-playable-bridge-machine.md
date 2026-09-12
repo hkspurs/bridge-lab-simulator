@@ -262,9 +262,9 @@ expect(sequence.phase).toBe('MOVE_AXIS_2');
 | Task | Status | Basis |
 |---|---|---|
 | 1–6 | **Implemented and review complete** | Four-rod schema/geometry, finite-torque claw, sequence, fixed-step integration, and interface are committed. Recording-derived geometry remains blocked and estimated. |
-| 7 | **Implementation complete; acceptance failed** | Review is clean at `336e28c`. All-joint endurance passes, but rod sliding is 6.069% against a 5% limit and penetration is 1.682 mm against a 1 mm limit. Exact-tree CI run 34680490442 passed lint, typecheck, build, 133 source tests and 10/10 browser cases; physics remained 23 pass / 2 fail and deploy was skipped. |
+| 7 | **Implementation complete; acceptance failed** | Final software review is clean at `ccc8c87`. Current local physics is 26 pass / 2 fail: sliding 6.069% > 5%, penetration 1.682 mm > 1 mm, and locked arm-axis rotation 0.020458514 rad > 0.02 rad. Exact-tree CI run 34681268756 passed lint, typecheck, build, 135 source tests, and 10/10 browser cases; physics remained 26 pass / 2 fail and deploy was skipped. |
 | 8 | **Feasible documentation complete; external tests blocked** | Recording, untouched holdout and physical iPhone were unavailable. No calibration or device measurement was run. Reservation and device-record fixtures are present for future evidence. |
-| 9 | **Not started / blocked** | No merge or deployment while physical, footage, holdout and device gates remain failed or blocked. |
+| 9 | **Review complete; release blocked** | Whole-branch software review is clean. No merge or deployment while physical, footage, holdout and device gates remain failed or blocked. |
 
 ## Task 9: Review and deploy the accepted version
 

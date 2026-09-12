@@ -1,0 +1,27 @@
+diff --git a/src/physics/createPrize.ts b/src/physics/createPrize.ts
+index acae57b..ee43abe 100644
+--- a/src/physics/createPrize.ts
++++ b/src/physics/createPrize.ts
+@@ -1,3 +1,5 @@
++import { ShapeCastResult } from "@babylonjs/core/Physics/shapeCastResult";
++import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
+ import { Color3 } from "@babylonjs/core/Maths/math.color";
+ import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+ import { Mesh } from "@babylonjs/core/Meshes/mesh";
+@@ -138,6 +140,16 @@ export function createPrize(scene: Scene, profile: SupportedCalibrationProfile)
+   prize.onDisposeObservable.add(() => shape.dispose());
+   // 2 mm air gap above the higher crown. Only Havok changes pose from here.
+   prize.position.y = prizeSpawnY(profile, height);
++  if (isPlayableProfile(profile)) {
++    const startPosition = prize.position.clone();
++    const endPosition = startPosition.subtract(new Vector3(0, height, 0));
++    const inputResult = new ShapeCastResult(), hitResult = new ShapeCastResult();
++    (scene.getPhysicsEngine()!.getPhysicsPlugin() as HavokPlugin).shapeCast({
++      shape, rotation: Quaternion.Identity(), startPosition, endPosition, shouldHitTriggers: false,
++    }, inputResult, hitResult);
++    if (!hitResult.hasHit) throw new Error("Initial support cast missed");
++    prize.position.copyFrom(Vector3.Lerp(startPosition, endPosition, hitResult.hitFraction));
++  }
+   prize.computeWorldMatrix(true);
+   const body = new PhysicsBody(prize, PhysicsMotionType.DYNAMIC, false, scene);
+   body.shape = shape;

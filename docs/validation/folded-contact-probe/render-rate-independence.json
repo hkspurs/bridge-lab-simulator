@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "experiment": "render-rate-independence",
+  "status": "failed",
+  "metadata": {
+    "generatedAt": "2026-09-12T11:27:30.856Z",
+    "commit": "31dcd18f1df3d9a838eb6802e3bd2399979d64ac",
+    "workingTree": "M src/physics/createPrize.ts\n?? node_modules",
+    "sourceDiffSha256": "8ddbca4ca8f5175823875a1e1acd8fd79ff02576f4bd59106f8b104711d21388",
+    "lockfileSha256": "f826127fc84b58610c6d0c37fce14e7ed43efe0266bfeb9af8a376d6282414fc",
+    "profileId": "bridge-lab-playable-v1-engineering-fixture",
+    "profileSha256": "093582a449b86ad61cf6ec6edc765140bb8f6a9e9b8fa60f411c088bfb36cb1a",
+    "clawProfileId": "claw-v1-engineering-fixture",
+    "playableClawProfileId": "claw-playable-v2-photo-reference-estimate",
+    "playableClawProfileSha256": "495ce5249c24056a75c8ec51264104908ccdcc7f62804cf857b824ab5d8a025b",
+    "playableDropHeightM": {
+      "key": "claw.dropHeightM",
+      "value": 0.32,
+      "unit": "m",
+      "allowedRange": [
+        0.2,
+        0.35
+      ],
+      "sourceKind": "engineering-initial",
+      "sourceRef": "src/config/playableProfile.ts (12.5 mm rod crown + 200 mm prize) + claw suspension 80 mm + head half-height 15 mm + estimated head clearance 12.5 mm",
+      "confidence": "low"
+    },
+    "babylonVersion": "8.56.2",
+    "havokVersion": "1.3.14",
+    "nodeVersion": "v24.19.0",
+    "gravityMps2": 9.80665,
+    "fixedStepSeconds": 0.008333333333333333
+  },
+  "metrics": {
+    "fixedTicks": 2400,
+    "differences": [
+      {
+        "hz": 30,
+        "ticks": 2400,
+        "positionM": 0,
+        "angleDegrees": 0,
+        "phase": "FAULT"
+      },
+      {
+        "hz": 60,
+        "ticks": 2400,
+        "positionM": 0,
+        "angleDegrees": 0,
+        "phase": "FAULT"
+      },
+      {
+        "hz": 120,
+        "ticks": 2400,
+        "positionM": 0,
+        "angleDegrees": 0,
+        "phase": "FAULT"
+      }
+    ]
+  },
+  "criteria": {
+    "positionWithinThreeMm": true,
+    "angleWithinOnePointFiveDegrees": true,
+    "identicalOutcome": true,
+    "completed": false
+  },
+  "notes": "Same real Havok scene and per-tick input; 30/60/120 Hz clock schedules. No modified gravity, physics step or body poses."
+}

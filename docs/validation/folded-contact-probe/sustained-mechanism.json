@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "experiment": "sustained-mechanism",
+  "status": "failed",
+  "metadata": {
+    "generatedAt": "2026-09-12T11:27:31.036Z",
+    "commit": "31dcd18f1df3d9a838eb6802e3bd2399979d64ac",
+    "workingTree": "M src/physics/createPrize.ts\n?? node_modules",
+    "sourceDiffSha256": "8ddbca4ca8f5175823875a1e1acd8fd79ff02576f4bd59106f8b104711d21388",
+    "lockfileSha256": "f826127fc84b58610c6d0c37fce14e7ed43efe0266bfeb9af8a376d6282414fc",
+    "profileId": "bridge-lab-playable-v1-engineering-fixture",
+    "profileSha256": "093582a449b86ad61cf6ec6edc765140bb8f6a9e9b8fa60f411c088bfb36cb1a",
+    "clawProfileId": "claw-v1-engineering-fixture",
+    "playableClawProfileId": "claw-playable-v2-photo-reference-estimate",
+    "playableClawProfileSha256": "495ce5249c24056a75c8ec51264104908ccdcc7f62804cf857b824ab5d8a025b",
+    "playableDropHeightM": {
+      "key": "claw.dropHeightM",
+      "value": 0.32,
+      "unit": "m",
+      "allowedRange": [
+        0.2,
+        0.35
+      ],
+      "sourceKind": "engineering-initial",
+      "sourceRef": "src/config/playableProfile.ts (12.5 mm rod crown + 200 mm prize) + claw suspension 80 mm + head half-height 15 mm + estimated head clearance 12.5 mm",
+      "confidence": "low"
+    },
+    "babylonVersion": "8.56.2",
+    "havokVersion": "1.3.14",
+    "nodeVersion": "v24.19.0",
+    "gravityMps2": 9.80665,
+    "fixedStepSeconds": 0.008333333333333333
+  },
+  "metrics": {
+    "peakContact": {
+      "cycle": 1,
+      "tick": 850,
+      "phase": "OPEN",
+      "body": "BRIDGE LAB prize",
+      "other": "claw arm 0",
+      "distanceM": -0.0012034221089836693,
+      "impulseNs": 0.006907861679792404,
+      "bodyVelocityMps": [
+        -0.007823740132153034,
+        -0.0019035591976717114,
+        -0.00017400129581801593
+      ]
+    },
+    "cycles": [
+      {
+        "cycle": 1,
+        "ticks": 923,
+        "phase": "FAULT",
+        "terminalAngularSpeedRadps": 0.4991445541494855,
+        "window": {
+          "ticks": 0,
+          "peakAngularSpeedRadps": 0,
+          "peakLinearSpeedMps": 0,
+          "peakKineticEnergyJ": 0,
+          "rmsAngularSpeedRadps": 0,
+          "rmsLinearSpeedMps": 0,
+          "meanKineticEnergyJ": 0,
+          "armAngleExcursionRad": [
+            0,
+            0
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      }
+    ],
+    "invalidPhysics": false,
+    "maximumPenetrationM": 0.0012034221089836693,
+    "maximumJointEscapeM": 0.00007452846786649631,
+    "jointMeasurements": [
+      {
+        "joint": "carriage-head-lock",
+        "maximumAnchorErrorM": 0.00007452846786649631,
+        "maximumLockedRotationErrorRad": 0.017116625519456426
+      },
+      {
+        "joint": "head-stem-lock",
+        "maximumAnchorErrorM": 0.0005416794599305585,
+        "maximumLockedRotationErrorRad": 0.017116797859433628
+      },
+      {
+        "joint": "left-arm-hinge",
+        "maximumAnchorErrorM": 0.0015693001439454051,
+        "maximumLockedRotationErrorRad": 0.038485722237041255
+      },
+      {
+        "joint": "right-arm-hinge",
+        "maximumAnchorErrorM": 0.000004178241454086761,
+        "maximumLockedRotationErrorRad": 0.010167570601520497
+      }
+    ],
+    "hingeAngleRangesRad": [
+      {
+        "minimum": -0.15222547413756116,
+        "maximum": 0.6501102917543091
+      },
+      {
+        "minimum": -0.12027959380157587,
+        "maximum": 0.6502380699272017
+      }
+    ],
+    "maximumHingeLimitViolationRad": 0.002225474137561162,
+    "terminalWindowTicks": 120,
+    "growthComparisons": [
+      {
+        "metric": "rmsAngularSpeedRadps",
+        "baselinePeak": 0,
+        "baselineMean": 0,
+        "laterPeak": null,
+        "tailMean": 0,
+        "numericalFloor": 0.0001,
+        "bounded": true
+      },
+      {
+        "metric": "rmsLinearSpeedMps",
+        "baselinePeak": 0,
+        "baselineMean": 0,
+        "laterPeak": null,
+        "tailMean": 0,
+        "numericalFloor": 0.00001,
+        "bounded": true
+      },
+      {
+        "metric": "peakAngularSpeedRadps",
+        "baselinePeak": 0,
+        "baselineMean": 0,
+        "laterPeak": null,
+        "tailMean": 0,
+        "numericalFloor": 0.0001,
+        "bounded": true
+      },
+      {
+        "metric": "peakLinearSpeedMps",
+        "baselinePeak": 0,
+        "baselineMean": 0,
+        "laterPeak": null,
+        "tailMean": 0,
+        "numericalFloor": 0.00001,
+        "bounded": true
+      },
+      {
+        "metric": "meanKineticEnergyJ",
+        "baselinePeak": 0,
+        "baselineMean": 0,
+        "laterPeak": null,
+        "tailMean": 0,
+        "numericalFloor": 1e-10,
+        "bounded": true
+      },
+      {
+        "metric": "peakKineticEnergyJ",
+        "baselinePeak": 0,
+        "baselineMean": 0,
+        "laterPeak": null,
+        "tailMean": 0,
+        "numericalFloor": 1e-10,
+        "bounded": true
+      }
+    ],
+    "initialBodyCount": 10
+  },
+  "criteria": {
+    "twentyCompleteCycles": false,
+    "finitePhysics": true,
+    "noJointEscape": false,
+    "completeTerminalWindows": false,
+    "boundedResidualMotion": true,
+    "noGrowingOscillation": false,
+    "noBodyLeakOrPrizeRecreation": true
+  },
+  "notes": "Complete automatic DROP/CLOSE/LIFT/RETURN/OPEN/SETTLE with deliberate manual holds and Continue. Prize never reset. All four joint anchors and locked rotations/hinge bounds are sampled every fixed tick including manual travel and REVIEW. Anchor bound 1 mm; angular numerical allowance is the sourced 0.02 rad tolerance. Every cycle adds a 120-tick REVIEW window measuring all four dynamic mechanism bodies; peak angular/linear speeds <=0.05 rad/s and 0.005 m/s, arm excursion <=0.02 rad. For peak/RMS speeds and mean/peak kinetic energy, each later window and the final three-window mean must stay within 110% of the first three-window baseline plus the declared numerical floors. Active actuator/carriage means no passive energy assertion."
+}

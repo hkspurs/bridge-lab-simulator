@@ -1,0 +1,576 @@
+{
+  "schemaVersion": 1,
+  "experiment": "sustained-mechanism",
+  "status": "passed",
+  "metadata": {
+    "generatedAt": "2026-09-12T11:28:01.402Z",
+    "commit": "31dcd18f1df3d9a838eb6802e3bd2399979d64ac",
+    "workingTree": "?? docs/validation/folded-contact-probe/\n?? node_modules",
+    "sourceDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lockfileSha256": "f826127fc84b58610c6d0c37fce14e7ed43efe0266bfeb9af8a376d6282414fc",
+    "profileId": "bridge-lab-playable-v1-engineering-fixture",
+    "profileSha256": "093582a449b86ad61cf6ec6edc765140bb8f6a9e9b8fa60f411c088bfb36cb1a",
+    "clawProfileId": "claw-v1-engineering-fixture",
+    "playableClawProfileId": "claw-playable-v2-photo-reference-estimate",
+    "playableClawProfileSha256": "495ce5249c24056a75c8ec51264104908ccdcc7f62804cf857b824ab5d8a025b",
+    "playableDropHeightM": {
+      "key": "claw.dropHeightM",
+      "value": 0.32,
+      "unit": "m",
+      "allowedRange": [
+        0.2,
+        0.35
+      ],
+      "sourceKind": "engineering-initial",
+      "sourceRef": "src/config/playableProfile.ts (12.5 mm rod crown + 200 mm prize) + claw suspension 80 mm + head half-height 15 mm + estimated head clearance 12.5 mm",
+      "confidence": "low"
+    },
+    "babylonVersion": "8.56.2",
+    "havokVersion": "1.3.14",
+    "nodeVersion": "v24.19.0",
+    "gravityMps2": 9.80665,
+    "fixedStepSeconds": 0.008333333333333333
+  },
+  "metrics": {
+    "peakContact": {
+      "cycle": 1,
+      "tick": 7,
+      "phase": "MOVE_AXIS_1",
+      "body": "BRIDGE LAB prize",
+      "other": "bridge rod-1",
+      "distanceM": -0.001681608575842708,
+      "impulseNs": 0.1287473738193512,
+      "bodyVelocityMps": [
+        0.12914107739925385,
+        0.12858663499355316,
+        -0.012133624404668808
+      ]
+    },
+    "cycles": [
+      {
+        "cycle": 1,
+        "ticks": 931,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005561307073422161,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.0052832602530887675,
+          "peakLinearSpeedMps": 0.00041030599002432567,
+          "peakKineticEnergyJ": 5.765025836972374e-9,
+          "rmsAngularSpeedRadps": 0.0010676107244639577,
+          "rmsLinearSpeedMps": 0.00008316783609877597,
+          "meanKineticEnergyJ": 4.767358497851738e-10,
+          "armAngleExcursionRad": [
+            0.0008266330156845303,
+            0.0008244969894107834
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 2,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.00553311267945647,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.00525201996863914,
+          "peakLinearSpeedMps": 0.00041091336360658386,
+          "peakKineticEnergyJ": 5.759147434063181e-9,
+          "rmsAngularSpeedRadps": 0.001064918430455216,
+          "rmsLinearSpeedMps": 0.00008287843959173012,
+          "meanKineticEnergyJ": 4.736079399692215e-10,
+          "armAngleExcursionRad": [
+            0.0008269763108037509,
+            0.0008244926555509569
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 3,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005555105862045179,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005261193961653645,
+          "peakLinearSpeedMps": 0.0004103866442842813,
+          "peakKineticEnergyJ": 5.750531673734879e-9,
+          "rmsAngularSpeedRadps": 0.0010697629198765666,
+          "rmsLinearSpeedMps": 0.00008312694102931354,
+          "meanKineticEnergyJ": 4.769084670367033e-10,
+          "armAngleExcursionRad": [
+            0.0008269458830910681,
+            0.0008243155657128298
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 4,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005532880314483126,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005249226932246159,
+          "peakLinearSpeedMps": 0.0004106194478146685,
+          "peakKineticEnergyJ": 5.740223108388275e-9,
+          "rmsAngularSpeedRadps": 0.001067311074179874,
+          "rmsLinearSpeedMps": 0.00008287665590166531,
+          "meanKineticEnergyJ": 4.741636646997813e-10,
+          "armAngleExcursionRad": [
+            0.0008268754216964602,
+            0.000824744546993883
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 5,
+        "ticks": 933,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005533645861758459,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005240460858599564,
+          "peakLinearSpeedMps": 0.00041062434310259235,
+          "peakKineticEnergyJ": 5.744169468122086e-9,
+          "rmsAngularSpeedRadps": 0.0010655960370127436,
+          "rmsLinearSpeedMps": 0.0000829853937199027,
+          "meanKineticEnergyJ": 4.74692283955942e-10,
+          "armAngleExcursionRad": [
+            0.0008268046245242244,
+            0.0008245513107471014
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 6,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005538586527922149,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005215876736547742,
+          "peakLinearSpeedMps": 0.00041158225639791686,
+          "peakKineticEnergyJ": 5.753143987169659e-9,
+          "rmsAngularSpeedRadps": 0.0010646240368337896,
+          "rmsLinearSpeedMps": 0.00008310319336367256,
+          "meanKineticEnergyJ": 4.754399678348161e-10,
+          "armAngleExcursionRad": [
+            0.0008268120211649688,
+            0.0008247134066892148
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 7,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005541523919310168,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005231173709791631,
+          "peakLinearSpeedMps": 0.00041013766074405217,
+          "peakKineticEnergyJ": 5.73812044194131e-9,
+          "rmsAngularSpeedRadps": 0.0010695184941055982,
+          "rmsLinearSpeedMps": 0.00008317438320189646,
+          "meanKineticEnergyJ": 4.772571469331272e-10,
+          "armAngleExcursionRad": [
+            0.0008267917299069616,
+            0.0008243442251474331
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 8,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005514207296866198,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005260084756485355,
+          "peakLinearSpeedMps": 0.0004103261989265619,
+          "peakKineticEnergyJ": 5.735050402522172e-9,
+          "rmsAngularSpeedRadps": 0.0010670119235040478,
+          "rmsLinearSpeedMps": 0.00008318026431234285,
+          "meanKineticEnergyJ": 4.766897652308673e-10,
+          "armAngleExcursionRad": [
+            0.0008266286682033774,
+            0.0008246523626969093
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 9,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005589999259297173,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005228115246496204,
+          "peakLinearSpeedMps": 0.00041075539029720824,
+          "peakKineticEnergyJ": 5.747022974599095e-9,
+          "rmsAngularSpeedRadps": 0.0010650430852355928,
+          "rmsLinearSpeedMps": 0.00008311942302609723,
+          "meanKineticEnergyJ": 4.756773406094969e-10,
+          "armAngleExcursionRad": [
+            0.0008265632072150808,
+            0.0008246233137434444
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 10,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005553245545231514,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005277420860546345,
+          "peakLinearSpeedMps": 0.00040996146037058256,
+          "peakKineticEnergyJ": 5.7548142143281475e-9,
+          "rmsAngularSpeedRadps": 0.0010672047240398881,
+          "rmsLinearSpeedMps": 0.00008310519016589351,
+          "meanKineticEnergyJ": 4.760852322822012e-10,
+          "armAngleExcursionRad": [
+            0.0008267349967646664,
+            0.0008244138344914997
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 11,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.0055088019006391395,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.0052466671921362696,
+          "peakLinearSpeedMps": 0.00041068242885455836,
+          "peakKineticEnergyJ": 5.7503886078297236e-9,
+          "rmsAngularSpeedRadps": 0.001065102309307359,
+          "rmsLinearSpeedMps": 0.0000829172383337804,
+          "meanKineticEnergyJ": 4.739740096187853e-10,
+          "armAngleExcursionRad": [
+            0.0008268009486968042,
+            0.0008246260063051736
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 12,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005519948900539997,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005249767099305078,
+          "peakLinearSpeedMps": 0.000410392987493264,
+          "peakKineticEnergyJ": 5.7403287490153906e-9,
+          "rmsAngularSpeedRadps": 0.0010672473203624214,
+          "rmsLinearSpeedMps": 0.00008311444954967329,
+          "meanKineticEnergyJ": 4.761778057518752e-10,
+          "armAngleExcursionRad": [
+            0.0008266052683656433,
+            0.0008245812446876499
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 13,
+        "ticks": 933,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005542926025507849,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.0052625155085197235,
+          "peakLinearSpeedMps": 0.0004101493640216146,
+          "peakKineticEnergyJ": 5.7444230467074845e-9,
+          "rmsAngularSpeedRadps": 0.0010656653912448117,
+          "rmsLinearSpeedMps": 0.0000829163574429774,
+          "meanKineticEnergyJ": 4.741160112993977e-10,
+          "armAngleExcursionRad": [
+            0.0008267530191397032,
+            0.0008247001165471168
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 14,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005579238758295287,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005252067931775982,
+          "peakLinearSpeedMps": 0.00041071190146105973,
+          "peakKineticEnergyJ": 5.7438808653580086e-9,
+          "rmsAngularSpeedRadps": 0.0010664118519842496,
+          "rmsLinearSpeedMps": 0.00008305204630293679,
+          "meanKineticEnergyJ": 4.754546944884491e-10,
+          "armAngleExcursionRad": [
+            0.0008268187552910033,
+            0.0008247447211620074
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 15,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.00557244289747737,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005244504661163992,
+          "peakLinearSpeedMps": 0.0004102543717854272,
+          "peakKineticEnergyJ": 5.728462622602322e-9,
+          "rmsAngularSpeedRadps": 0.0010678942213984217,
+          "rmsLinearSpeedMps": 0.00008317944650296483,
+          "meanKineticEnergyJ": 4.769006193858038e-10,
+          "armAngleExcursionRad": [
+            0.000827102512553135,
+            0.0008247998859186589
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 16,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005520503968785532,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005280175712720447,
+          "peakLinearSpeedMps": 0.00041063606990584086,
+          "peakKineticEnergyJ": 5.76861793846026e-9,
+          "rmsAngularSpeedRadps": 0.001065001896198476,
+          "rmsLinearSpeedMps": 0.000082947513423167,
+          "meanKineticEnergyJ": 4.742305735562666e-10,
+          "armAngleExcursionRad": [
+            0.0008265340590691839,
+            0.0008245959775157186
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 17,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.00557820685288234,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.00527181476428095,
+          "peakLinearSpeedMps": 0.0004098855256143428,
+          "peakKineticEnergyJ": 5.745520951338e-9,
+          "rmsAngularSpeedRadps": 0.001067306553934794,
+          "rmsLinearSpeedMps": 0.00008303534445074472,
+          "meanKineticEnergyJ": 4.755299091492638e-10,
+          "armAngleExcursionRad": [
+            0.000826862919893645,
+            0.0008245135256087499
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 18,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.0055311014883743575,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005270498805526622,
+          "peakLinearSpeedMps": 0.0004109196308668014,
+          "peakKineticEnergyJ": 5.752715796572455e-9,
+          "rmsAngularSpeedRadps": 0.0010658002470729966,
+          "rmsLinearSpeedMps": 0.00008307575353068926,
+          "meanKineticEnergyJ": 4.755058187350335e-10,
+          "armAngleExcursionRad": [
+            0.0008267444908079957,
+            0.0008245549909863259
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 19,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.0055528189994853705,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005276370794344342,
+          "peakLinearSpeedMps": 0.00041025774015750253,
+          "peakKineticEnergyJ": 5.744317121830343e-9,
+          "rmsAngularSpeedRadps": 0.001066607812815455,
+          "rmsLinearSpeedMps": 0.00008294423286043257,
+          "meanKineticEnergyJ": 4.745851879574076e-10,
+          "armAngleExcursionRad": [
+            0.0008268031590489278,
+            0.0008245446516232935
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      },
+      {
+        "cycle": 20,
+        "ticks": 932,
+        "phase": "REVIEW",
+        "terminalAngularSpeedRadps": 0.005567724351622259,
+        "window": {
+          "ticks": 120,
+          "peakAngularSpeedRadps": 0.005262804218383076,
+          "peakLinearSpeedMps": 0.0004103381464809662,
+          "peakKineticEnergyJ": 5.741394861950218e-9,
+          "rmsAngularSpeedRadps": 0.0010687153519766076,
+          "rmsLinearSpeedMps": 0.00008317939232680749,
+          "meanKineticEnergyJ": 4.771010507113662e-10,
+          "armAngleExcursionRad": [
+            0.0008268085440736872,
+            0.0008247549402446985
+          ]
+        },
+        "bodyCount": 10,
+        "prizeInstanceId": 1168
+      }
+    ],
+    "invalidPhysics": false,
+    "maximumPenetrationM": 0.001681608575842708,
+    "maximumJointEscapeM": 0.000020606523179459295,
+    "jointMeasurements": [
+      {
+        "joint": "carriage-head-lock",
+        "maximumAnchorErrorM": 0.000020606523179459295,
+        "maximumLockedRotationErrorRad": 0.005451366534469367
+      },
+      {
+        "joint": "head-stem-lock",
+        "maximumAnchorErrorM": 0.00016642711983906686,
+        "maximumLockedRotationErrorRad": 0.005451372411518739
+      },
+      {
+        "joint": "left-arm-hinge",
+        "maximumAnchorErrorM": 0.0003391456086408328,
+        "maximumLockedRotationErrorRad": 0.009815179831594445
+      },
+      {
+        "joint": "right-arm-hinge",
+        "maximumAnchorErrorM": 0.0004126019821291254,
+        "maximumLockedRotationErrorRad": 0.01016760043576325
+      }
+    ],
+    "hingeAngleRangesRad": [
+      {
+        "minimum": -0.11999623967331988,
+        "maximum": 0.650137563501868
+      },
+      {
+        "minimum": -0.12000631966621858,
+        "maximum": 0.6504329749635889
+      }
+    ],
+    "maximumHingeLimitViolationRad": 0,
+    "terminalWindowTicks": 120,
+    "growthComparisons": [
+      {
+        "metric": "rmsAngularSpeedRadps",
+        "baselinePeak": 0.0010697629198765666,
+        "baselineMean": 0.0010674306915985801,
+        "laterPeak": 0.0010695184941055982,
+        "tailMean": 0.0010670411372883531,
+        "numericalFloor": 0.0001,
+        "bounded": true
+      },
+      {
+        "metric": "rmsLinearSpeedMps",
+        "baselinePeak": 0.00008316783609877597,
+        "baselineMean": 0.00008305773890660656,
+        "laterPeak": 0.00008318026431234285,
+        "tailMean": 0.0000830664595726431,
+        "numericalFloor": 0.00001,
+        "bounded": true
+      },
+      {
+        "metric": "peakAngularSpeedRadps",
+        "baselinePeak": 0.0052832602530887675,
+        "baselineMean": 0.005265491394460517,
+        "laterPeak": 0.005280175712720447,
+        "tailMean": 0.005269891272751347,
+        "numericalFloor": 0.0001,
+        "bounded": true
+      },
+      {
+        "metric": "peakLinearSpeedMps",
+        "baselinePeak": 0.00041091336360658386,
+        "baselineMean": 0.00041053533263839693,
+        "laterPeak": 0.00041158225639791686,
+        "tailMean": 0.00041050517250175667,
+        "numericalFloor": 0.00001,
+        "bounded": true
+      },
+      {
+        "metric": "meanKineticEnergyJ",
+        "baselinePeak": 4.769084670367033e-10,
+        "baselineMean": 4.757507522636996e-10,
+        "laterPeak": 4.772571469331272e-10,
+        "tailMean": 4.757306858012691e-10,
+        "numericalFloor": 1e-10,
+        "bounded": true
+      },
+      {
+        "metric": "peakKineticEnergyJ",
+        "baselinePeak": 5.765025836972374e-9,
+        "baselineMean": 5.758234981590145e-9,
+        "laterPeak": 5.76861793846026e-9,
+        "tailMean": 5.746142593451006e-9,
+        "numericalFloor": 1e-10,
+        "bounded": true
+      }
+    ],
+    "initialBodyCount": 10
+  },
+  "criteria": {
+    "twentyCompleteCycles": true,
+    "finitePhysics": true,
+    "noJointEscape": true,
+    "completeTerminalWindows": true,
+    "boundedResidualMotion": true,
+    "noGrowingOscillation": true,
+    "noBodyLeakOrPrizeRecreation": true
+  },
+  "notes": "Complete automatic DROP/CLOSE/LIFT/RETURN/OPEN/SETTLE with deliberate manual holds and Continue. Prize never reset. All four joint anchors and locked rotations/hinge bounds are sampled every fixed tick including manual travel and REVIEW. Anchor bound 1 mm; angular numerical allowance is the sourced 0.02 rad tolerance. Every cycle adds a 120-tick REVIEW window measuring all four dynamic mechanism bodies; peak angular/linear speeds <=0.05 rad/s and 0.005 m/s, arm excursion <=0.02 rad. For peak/RMS speeds and mean/peak kinetic energy, each later window and the final three-window mean must stay within 110% of the first three-window baseline plus the declared numerical floors. Active actuator/carriage means no passive energy assertion."
+}
